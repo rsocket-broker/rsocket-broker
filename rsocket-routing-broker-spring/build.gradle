@@ -1,0 +1,10 @@
+description = 'RSocket Routing Broker Spring'
+
+dependencies {
+	implementation project(':rsocket-routing-broker')
+
+	implementation 'org.springframework.boot:spring-boot-starter-rsocket'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+}

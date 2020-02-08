@@ -1,0 +1,7 @@
+description = 'RSocket Routing Broker'
+
+dependencies {
+	implementation 'io.projectreactor.netty:reactor-netty'
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testImplementation 'org.assertj:assertj-core'
+}
