@@ -19,6 +19,7 @@ package io.rsocket.routing.broker.spring;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,5 +37,9 @@ public class SpringRoutingBrokerTests {
 	@EnableAutoConfiguration
 	protected static class TestConfig {
 
+	}
+
+	public static void main(String[] args) {
+		new SpringApplication(TestConfig.class).run("--io.rsocket.routing.broker.websocket.enabled=true");
 	}
 }

@@ -23,7 +23,6 @@ subprojects {
 		}
 
 		dependencies {
-			dependency "com.typesafe:config:${typesafeConfigVersion}"
 			dependency "io.rsocket:rsocket-core:${rsocketVersion}"
 			dependency "io.rsocket:rsocket-load-balancer:${rsocketVersion}"
 			dependency "io.rsocket:rsocket-micrometer:${rsocketVersion}"
