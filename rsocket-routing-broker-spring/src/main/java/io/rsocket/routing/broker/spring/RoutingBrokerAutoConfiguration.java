@@ -48,6 +48,8 @@ import org.springframework.http.client.reactive.ReactorResourceFactory;
 @EnableConfigurationProperties
 public class RoutingBrokerAutoConfiguration {
 
+	public static final String BROKER_PREFIX = "io.rsocket.routing.broker";
+
 	@Bean
 	public Broker broker() {
 		return new Broker();
@@ -88,11 +90,13 @@ public class RoutingBrokerAutoConfiguration {
 	}
 
 	@Configuration
-	@ConditionalOnProperty(name = "io.rsocket.routing.broker.tcp.enabled", matchIfMissing = true)
+	@ConditionalOnProperty(name = TcpConfiguration.TCP_PREFIX + ".enabled", matchIfMissing = true)
 	protected static class TcpConfiguration {
 
+		public static final String TCP_PREFIX = BROKER_PREFIX + ".tcp";
+
 		@Bean
-		@ConfigurationProperties("io.rsocket.routing.broker.tcp")
+		@ConfigurationProperties(TCP_PREFIX)
 		public TcpBrokerProperties tcpBrokerProperties() {
 			return new TcpBrokerProperties();
 		}
@@ -113,10 +117,11 @@ public class RoutingBrokerAutoConfiguration {
 	}
 
 	@Configuration
-	@ConditionalOnProperty(name = "io.rsocket.routing.broker.websocket.enabled")
+	@ConditionalOnProperty(name = WebsocketConfiguration.WEBSOCKET_PREFIX + ".enabled")
 	protected static class WebsocketConfiguration {
+		public static final String WEBSOCKET_PREFIX = BROKER_PREFIX + ".websocket";
 		@Bean
-		@ConfigurationProperties("io.rsocket.routing.broker.websocket")
+		@ConfigurationProperties(WEBSOCKET_PREFIX)
 		public WebsocketBrokerProperties websocketBrokerProperties() {
 			return new WebsocketBrokerProperties();
 		}
