@@ -16,11 +16,11 @@
 
 package io.rsocket.routing.broker.config;
 
-public class WebsocketBrokerProperties extends AbstractBrokerProperties {
+public class ClusterBrokerProperties extends AbstractBrokerProperties {
 
-	public WebsocketBrokerProperties() {
-		super(Transport.WEBSOCKET);
-		setPort(8101);
-		setType("broker");
+	public ClusterBrokerProperties() {
+		super(Transport.TCP);
+		setPort(7001);
+		setType("cluster");
 	}
 }

@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-package io.rsocket.routing.broker.config;
+package io.rsocket.routing.broker.acceptor;
 
-public class WebsocketBrokerProperties extends AbstractBrokerProperties {
+import io.rsocket.ConnectionSetupPayload;
+import io.rsocket.RSocket;
+import io.rsocket.SocketAcceptor;
+import reactor.core.publisher.Mono;
 
-	public WebsocketBrokerProperties() {
-		super(Transport.WEBSOCKET);
-		setPort(8101);
-		setType("broker");
+public class ClusterSocketAcceptor implements SocketAcceptor {
+	@Override
+	public Mono<RSocket> accept(ConnectionSetupPayload setup, RSocket sendingSocket) {
+		return null;
 	}
 }

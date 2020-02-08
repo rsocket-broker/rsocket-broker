@@ -21,5 +21,6 @@ public class TcpBrokerProperties extends AbstractBrokerProperties {
 	public TcpBrokerProperties() {
 		super(Transport.TCP);
 		setPort(8001);
+		setType("broker");
 	}
 }

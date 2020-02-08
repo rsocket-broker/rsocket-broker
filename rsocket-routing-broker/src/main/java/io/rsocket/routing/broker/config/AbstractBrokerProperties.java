@@ -17,6 +17,7 @@
 package io.rsocket.routing.broker.config;
 
 import java.net.InetAddress;
+import java.util.StringJoiner;
 
 public abstract class AbstractBrokerProperties {
 
@@ -40,6 +41,8 @@ public abstract class AbstractBrokerProperties {
 	 * transport).
 	 */
 	private String mappingPath;
+
+	private String type;
 
 	public AbstractBrokerProperties(Transport transport) {
 		this.transport = transport;
@@ -71,6 +74,26 @@ public abstract class AbstractBrokerProperties {
 
 	public void setMappingPath(String mappingPath) {
 		this.mappingPath = mappingPath;
+	}
+
+	public String getType() {
+		return this.type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	@Override
+	public String toString() {
+		return new StringJoiner(", ", getClass()
+				.getSimpleName() + "[", "]")
+				.add("port=" + port)
+				.add("address=" + address)
+				.add("transport=" + transport)
+				.add("mappingPath='" + mappingPath + "'")
+				.add("type='" + type + "'")
+				.toString();
 	}
 
 	/**

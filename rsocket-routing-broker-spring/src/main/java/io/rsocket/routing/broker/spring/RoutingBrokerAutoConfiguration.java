@@ -21,14 +21,15 @@ import java.util.stream.Collectors;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.routing.broker.Broker;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
+import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
 import io.rsocket.routing.broker.config.AbstractBrokerProperties;
+import io.rsocket.routing.broker.config.ClusterBrokerProperties;
 import io.rsocket.routing.broker.config.TcpBrokerProperties;
 import io.rsocket.routing.broker.config.WebsocketBrokerProperties;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -90,54 +91,75 @@ public class RoutingBrokerAutoConfiguration {
 	}
 
 	@Configuration
-	@ConditionalOnProperty(name = TcpConfiguration.TCP_PREFIX + ".enabled", matchIfMissing = true)
-	protected static class TcpConfiguration {
+	@ConditionalOnProperty(name = ClusterConfiguration.PREFIX + ".enabled", matchIfMissing = true)
+	protected static class ClusterConfiguration {
 
-		public static final String TCP_PREFIX = BROKER_PREFIX + ".tcp";
+		public static final String PREFIX = BROKER_PREFIX + ".cluster";
 
 		@Bean
-		@ConfigurationProperties(TCP_PREFIX)
+		public ClusterSocketAcceptor clusterSocketAcceptor() {
+			return new ClusterSocketAcceptor();
+		}
+
+		@Bean
+		@ConfigurationProperties(PREFIX)
+		public ClusterBrokerProperties clusterBrokerProperties() {
+			return new ClusterBrokerProperties();
+		}
+
+		@Bean
+		public RSocketServerBootstrap clusterRSocketServerBootstrap(
+				ClusterBrokerProperties properties,
+				ReactorResourceFactory resourceFactory,
+				ObjectProvider<ServerRSocketFactoryProcessor> processors,
+				ClusterSocketAcceptor clusterSocketAcceptor) {
+			RSocketServerFactory serverFactory = getRSocketServerFactory(resourceFactory, processors, properties);
+			return new BrokerRSocketServerBootstrap(properties, serverFactory, clusterSocketAcceptor);
+		}
+	}
+
+	@Configuration
+	@ConditionalOnProperty(name = TcpConfiguration.PREFIX + ".enabled", matchIfMissing = true)
+	protected static class TcpConfiguration {
+
+		public static final String PREFIX = BROKER_PREFIX + ".tcp";
+
+		@Bean
+		@ConfigurationProperties(PREFIX)
 		public TcpBrokerProperties tcpBrokerProperties() {
 			return new TcpBrokerProperties();
 		}
 
 		@Bean
-		RSocketServerFactory tcpRSocketServerFactory(TcpBrokerProperties properties, ReactorResourceFactory resourceFactory,
-				ObjectProvider<ServerRSocketFactoryProcessor> processors) {
-			return getRSocketServerFactory(resourceFactory, processors, properties);
-		}
-
-		@Bean
 		public RSocketServerBootstrap tcpRSocketServerBootstrap(
 				TcpBrokerProperties properties,
-				@Qualifier("tcpRSocketServerFactory") RSocketServerFactory tcpRSocketServerFactory,
+				ReactorResourceFactory resourceFactory,
+				ObjectProvider<ServerRSocketFactoryProcessor> processors,
 				BrokerSocketAcceptor brokerSocketAcceptor) {
-			return new BrokerRSocketServerBootstrap(properties, tcpRSocketServerFactory, brokerSocketAcceptor);
+			RSocketServerFactory serverFactory = getRSocketServerFactory(resourceFactory, processors, properties);
+			return new BrokerRSocketServerBootstrap(properties, serverFactory, brokerSocketAcceptor);
 		}
 	}
 
 	@Configuration
-	@ConditionalOnProperty(name = WebsocketConfiguration.WEBSOCKET_PREFIX + ".enabled")
+	@ConditionalOnProperty(name = WebsocketConfiguration.PREFIX + ".enabled")
 	protected static class WebsocketConfiguration {
-		public static final String WEBSOCKET_PREFIX = BROKER_PREFIX + ".websocket";
+		public static final String PREFIX = BROKER_PREFIX + ".websocket";
+
 		@Bean
-		@ConfigurationProperties(WEBSOCKET_PREFIX)
+		@ConfigurationProperties(PREFIX)
 		public WebsocketBrokerProperties websocketBrokerProperties() {
 			return new WebsocketBrokerProperties();
 		}
 
 		@Bean
-		RSocketServerFactory websocketRSocketServerFactory(WebsocketBrokerProperties properties, ReactorResourceFactory resourceFactory,
-				ObjectProvider<ServerRSocketFactoryProcessor> processors) {
-			return getRSocketServerFactory(resourceFactory, processors, properties);
-		}
-
-		@Bean
 		public RSocketServerBootstrap websocketRSocketServerBootstrap(
 				WebsocketBrokerProperties properties,
-				@Qualifier("websocketRSocketServerFactory") RSocketServerFactory websocketRSocketServerFactory,
+				ReactorResourceFactory resourceFactory,
+				ObjectProvider<ServerRSocketFactoryProcessor> processors,
 				BrokerSocketAcceptor brokerSocketAcceptor) {
-			return new BrokerRSocketServerBootstrap(properties, websocketRSocketServerFactory, brokerSocketAcceptor);
+			RSocketServerFactory serverFactory = getRSocketServerFactory(resourceFactory, processors, properties);
+			return new BrokerRSocketServerBootstrap(properties, serverFactory, brokerSocketAcceptor);
 		}
 	}
 
@@ -147,14 +169,17 @@ public class RoutingBrokerAutoConfiguration {
 		private static final Log logger = LogFactory.getLog(NettyRSocketServer.class);
 		private final AbstractBrokerProperties properties;
 
-		public BrokerRSocketServerBootstrap(AbstractBrokerProperties properties, RSocketServerFactory serverFactory, SocketAcceptor socketAcceptor) {
+		public BrokerRSocketServerBootstrap(AbstractBrokerProperties properties,
+				RSocketServerFactory serverFactory,
+				SocketAcceptor socketAcceptor) {
 			super(serverFactory, socketAcceptor);
 			this.properties = properties;
 		}
 
 		@Override
 		public void start() {
-			logger.info("Netty RSocket starting transport: " + properties.getTransport());
+			logger.info("Netty RSocket starting transport: " + properties.getTransport()
+					+ " " + properties.getType());
 			super.start();
 		}
 	}
