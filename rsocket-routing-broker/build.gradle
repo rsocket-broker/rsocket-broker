@@ -2,6 +2,9 @@ description = 'RSocket Routing Broker'
 
 dependencies {
 	implementation "io.rsocket:rsocket-core"
+	implementation "io.rsocket.routing:rsocket-routing-common"
+	implementation "org.agrona:agrona"
+	implementation 'org.roaringbitmap:RoaringBitmap'
 
 	implementation 'io.projectreactor.netty:reactor-netty'
 	testImplementation 'org.junit.jupiter:junit-jupiter'
