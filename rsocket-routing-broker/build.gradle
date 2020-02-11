@@ -3,6 +3,7 @@ description = 'RSocket Routing Broker'
 dependencies {
 	implementation "io.rsocket:rsocket-core"
 	implementation "io.rsocket.routing:rsocket-routing-common"
+	implementation "io.rsocket.routing:rsocket-routing-frames"
 	implementation "org.agrona:agrona"
 	implementation 'org.roaringbitmap:RoaringBitmap'
 

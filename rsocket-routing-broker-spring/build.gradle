@@ -2,6 +2,8 @@ description = 'RSocket Routing Broker Spring'
 
 dependencies {
 	implementation project(':rsocket-routing-broker')
+	implementation 'io.rsocket.routing:rsocket-routing-common'
+	implementation 'io.rsocket.routing:rsocket-routing-frames'
 
 	implementation 'org.springframework.boot:spring-boot-starter-rsocket'
 	testImplementation('org.springframework.boot:spring-boot-starter-test') {
