@@ -127,7 +127,7 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 			RSocket rSocket = rSocketLocator.apply(tags);
 
 			return rSocket.requestChannel(Flux.from(payloads).skip(1).startWith(payload))
-					.onErrorResume(e -> Flux.error(new RuntimeException("TODO")));
+					.onErrorResume(e -> Flux.error(new RuntimeException("TODO", e)));
 		} catch (Throwable e) {
 			payload.release();
 			return Flux.error(new RuntimeException("TODO: fill out values")); //TODO:
