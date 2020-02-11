@@ -35,6 +35,7 @@ import reactor.core.publisher.FluxProcessor;
  * Maintains index of RouteSetup objects. Actions include find, add and remove. Also
  * streams events with a RouteSetup is added or removed.
  */
+// TODO: use some other object rather than RouteSetup
 public class RoutingTable implements Disposable {
 
 	private static final Logger logger = LoggerFactory.getLogger(RoutingTable.class);
@@ -89,6 +90,9 @@ public class RoutingTable implements Disposable {
 	}
 
 	static Predicate<RouteSetup> containsTags(Tags tags) {
-		return event -> event.getTags().entries().containsAll(tags.entries());
+		return event -> {
+			boolean contains = event.getTags().entries().containsAll(tags.entries());
+			return contains;
+		};
 	}
 }

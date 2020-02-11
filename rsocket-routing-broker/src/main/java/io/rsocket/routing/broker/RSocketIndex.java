@@ -24,8 +24,11 @@ import io.rsocket.routing.broker.util.IndexedMap;
 import io.rsocket.routing.broker.util.RoaringBitmapIndexedMap;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RSocketIndex implements IndexedMap<Id, RSocket, Tags> {
+	private static final Logger logger = LoggerFactory.getLogger(RSocketIndex.class);
 
 	private final IndexedMap<Id, RSocket, Tags> indexedMap = new RoaringBitmapIndexedMap<>();
 
@@ -34,6 +37,7 @@ public class RSocketIndex implements IndexedMap<Id, RSocket, Tags> {
 	}
 
 	public RSocket put(Id key, RSocket value, Tags indexable) {
+		logger.debug("indexing RSocket for Id {} tags {}", key, indexable);
 		return indexedMap.put(key, value, indexable);
 	}
 

@@ -27,6 +27,7 @@ import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.locator.RSocketLocator;
 import io.rsocket.routing.broker.rsocket.RoutingRSocket;
 import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.RouteSetup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,13 +63,16 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 					// TODO: deal with existing connection for routeSetup.routeId
 					RoutingRSocket receivingSocket = new RoutingRSocket(rSocketLocator, tagsExtractor);
 
-					// TODO: enrich tags with routeId and serviceName
-					// update routing table with incoming route.
-					routingTable.add(routeSetup);
+					// enrich RouteSetup before indexing or RoutingTable
+					RouteSetup enriched = enrich(routeSetup);
 
+					// update index before RoutingTable
 					// adds sendingSocket to rSocketIndex for later lookup
-					rSocketIndex.put(routeSetup.getRouteId(), sendingSocket, routeSetup
+					rSocketIndex.put(enriched.getRouteId(), sendingSocket, enriched
 							.getTags());
+
+					// update routing table with incoming route.
+					routingTable.add(enriched);
 
 					return Mono.fromSupplier(() -> receivingSocket);
 				});
@@ -81,5 +85,16 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 			return Mono.error(e);
 
 		}
+	}
+
+	/**
+	 * enrich tags with routeId and serviceName
+ 	 */
+	private RouteSetup enrich(RouteSetup routeSetup) {
+		return RouteSetup.from(routeSetup.getRouteId(), routeSetup.getServiceName())
+				.with(routeSetup.getTags())
+				.with(WellKnownKey.ROUTE_ID, routeSetup.getRouteId().toString())
+				.with(WellKnownKey.SERVICE_NAME, routeSetup.getServiceName())
+				.build();
 	}
 }

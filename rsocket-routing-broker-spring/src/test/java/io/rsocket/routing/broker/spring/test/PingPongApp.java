@@ -32,6 +32,7 @@ import io.rsocket.routing.broker.spring.MimeTypes;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.common.WellKnownKey;
+import io.rsocket.routing.frames.Address;
 import io.rsocket.routing.frames.AddressFlyweight;
 import io.rsocket.routing.frames.RouteSetupFlyweight;
 import io.rsocket.transport.netty.client.TcpClientTransport;
@@ -114,6 +115,8 @@ public class PingPongApp {
 		ByteBuf address = AddressFlyweight
 				.encode(ByteBufAllocator.DEFAULT, originRouteId, Tags.empty(), tags);
 
+		Address from = Address.from(address);
+
 		CompositeByteBuf composite = ByteBufAllocator.DEFAULT.compositeBuffer();
 		CompositeMetadataFlyweight.encodeAndAddMetadata(composite, ByteBufAllocator.DEFAULT,
 				MimeTypes.ADDRESS_MIME_TYPE.toString(), address);
@@ -146,12 +149,6 @@ public class PingPongApp {
 		@Override
 		public void onApplicationEvent(ApplicationReadyEvent event) {
 			logger.info("Starting Ping {}", id);
-			try {
-				Thread.sleep(5000);
-			}
-			catch (InterruptedException e) {
-				e.printStackTrace();
-			}
 			ConfigurableEnvironment env = event.getApplicationContext().getEnvironment();
 			Integer take = env.getProperty("ping.take", Integer.class, null);
 			Integer gatewayPort = env.getProperty("spring.rsocket.server.port",
@@ -227,19 +224,19 @@ public class PingPongApp {
 
 		@Override
 		public int getOrder() {
-			return -1;
+			return 1;
 		}
 
 		@Override
 		public void onApplicationEvent(ApplicationReadyEvent event) {
 			ConfigurableEnvironment env = event.getApplicationContext().getEnvironment();
 			Integer pongDelay = env.getProperty("pong.delay", Integer.class, 5000);
-			/*try {
+			try {
 				Thread.sleep(pongDelay);
 			}
 			catch (InterruptedException e) {
 				e.printStackTrace();
-			}*/
+			}
 			logger.info("Starting Pong");
 			Integer gatewayPort = env.getProperty("spring.rsocket.server.port",
 					Integer.class, 8001);

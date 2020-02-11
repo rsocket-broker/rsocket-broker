@@ -26,8 +26,12 @@ import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.rsocket.ConnectingRSocket;
 import io.rsocket.routing.common.Tags;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RemoteRSocketLocator implements RSocketLocator {
+
+	private static final Logger logger = LoggerFactory.getLogger(RemoteRSocketLocator.class);
 
 	private static final FastThreadLocal<List<RSocket>> MEMBERS;
 
@@ -68,8 +72,15 @@ public class RemoteRSocketLocator implements RSocketLocator {
 
 		List<RSocket> members = members(tags);
 		if (members.isEmpty()) {
-			return new ConnectingRSocket(routingTable.joinEvents(tags).next()
-					.map(routeSetup -> loadbalance(members(tags))));
+			return new ConnectingRSocket(routingTable.joinEvents(tags)
+					.next()
+					.map(routeSetup -> {
+						List<RSocket> found = members(tags);
+						if (logger.isWarnEnabled() && (found == null || found.isEmpty())) {
+							logger.warn("Unable to locate RSockets for tags {}", tags);
+						}
+						return loadbalance(found);
+					}));
 		}
 
 		return loadbalance(members);
@@ -77,7 +88,7 @@ public class RemoteRSocketLocator implements RSocketLocator {
 
 	private RSocket loadbalance(List<RSocket> rSockets) {
 		if (rSockets == null || rSockets.isEmpty()) {
-			// return emtpty?
+			// TODO: return empty?
 			return new AbstractRSocket() {
 			};
 		}
