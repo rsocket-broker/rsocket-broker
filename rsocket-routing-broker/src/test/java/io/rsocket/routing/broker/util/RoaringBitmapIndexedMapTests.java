@@ -28,15 +28,15 @@ public class RoaringBitmapIndexedMapTests {
 	public void emptyTagsWorks() {
 		RoaringBitmapIndexedMap<String> map = new RoaringBitmapIndexedMap<>();
 		Id id = new Id(0, 1);
-		map.put(id, id.toString(), Tags.builder().build());
+		map.put(id, id.toString(), Tags.builder().buildTags());
 		Id id2 = new Id(0, 2);
-		map.put(id2, id2.toString(), Tags.builder().build());
+		map.put(id2, id2.toString(), Tags.builder().buildTags());
 
 		assertThat(map.get(id)).isEqualTo(id.toString());
 		assertThat(map.get(id2)).isEqualTo(id2.toString());
 
 		assertThat(map.values()).hasSize(2).contains(id.toString(), id2.toString());
-		assertThat(map.query(Tags.builder().build())).hasSize(2)
+		assertThat(map.query(Tags.builder().buildTags())).hasSize(2)
 				.contains(id.toString(), id2.toString());
 
 		assertThat(map.remove(id)).isEqualTo(id.toString());
@@ -50,17 +50,17 @@ public class RoaringBitmapIndexedMapTests {
 	public void indexedTagsWorks() {
 		RoaringBitmapIndexedMap<String> map = new RoaringBitmapIndexedMap<>();
 		Id id = new Id(0, 1);
-		map.put(id, id.toString(), Tags.builder().with("tag1", "tag1value").build());
+		map.put(id, id.toString(), Tags.builder().with("tag1", "tag1value").buildTags());
 		Id id2 = new Id(0, 2);
-		map.put(id2, id2.toString(), Tags.builder().with("tag2", "tag2value").build());
+		map.put(id2, id2.toString(), Tags.builder().with("tag2", "tag2value").buildTags());
 
 		assertThat(map.get(id)).isEqualTo(id.toString());
 		assertThat(map.get(id2)).isEqualTo(id2.toString());
 
 		assertThat(map.values()).hasSize(2).contains(id.toString(), id2.toString());
-		assertThat(map.query(Tags.builder().with("tag1", "tag1value").build())).hasSize(1)
+		assertThat(map.query(Tags.builder().with("tag1", "tag1value").buildTags())).hasSize(1)
 				.contains(id.toString());
-		assertThat(map.query(Tags.builder().with("tag2", "tag2value").build())).hasSize(1)
+		assertThat(map.query(Tags.builder().with("tag2", "tag2value").buildTags())).hasSize(1)
 				.contains(id2.toString());
 	}
 }

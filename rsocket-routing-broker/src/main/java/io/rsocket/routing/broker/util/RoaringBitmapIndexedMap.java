@@ -68,7 +68,7 @@ public class RoaringBitmapIndexedMap<V> implements IndexedMap<Id, V, Tags> {
 		synchronized (this) {
 			previousValue = indexToValue.put(index, value);
 			indexToTags.put(index, tags);
-			for (Entry<Key, String> tag : tags.asMap().entrySet()) {
+			for (Entry<Key, String> tag : tags.entries()) {
 				RoaringBitmap bitmap = tagIndexes.get(tag.getKey(), tag.getValue());
 				if (bitmap == null) {
 					bitmap = new RoaringBitmap();
@@ -97,7 +97,7 @@ public class RoaringBitmapIndexedMap<V> implements IndexedMap<Id, V, Tags> {
 	}
 
 	private void removeTags(int index, Tags tags) {
-		for (Entry<Key, String> tag : tags.asMap().entrySet()) {
+		for (Entry<Key, String> tag : tags.entries()) {
 			RoaringBitmap bitmap = tagIndexes.get(tag.getKey(), tag.getValue());
 
 			if (bitmap != null) {
@@ -137,12 +137,12 @@ public class RoaringBitmapIndexedMap<V> implements IndexedMap<Id, V, Tags> {
 
 	@Override
 	public List<V> query(Tags tags) {
-		if (tags == null || tags.asMap().isEmpty()) {
+		if (tags == null || tags.isEmpty()) {
 			return new ArrayList<>(indexToValue.values());
 		}
 
 		RoaringBitmap result = null;
-		for (Entry<Key, String> tag : tags.asMap().entrySet()) {
+		for (Entry<Key, String> tag : tags.entries()) {
 			RoaringBitmap bitmap = tagIndexes.get(tag.getKey(), tag.getValue());
 
 			if (bitmap == null) {
@@ -158,7 +158,7 @@ public class RoaringBitmapIndexedMap<V> implements IndexedMap<Id, V, Tags> {
 			}
 
 			if (result.isEmpty()) {
-				// anding empty is always empty
+				// anding empty is always empty, short circuit
 				return Collections.emptyList();
 			}
 

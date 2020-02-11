@@ -16,14 +16,70 @@
 
 package io.rsocket.routing.broker.acceptor;
 
+import java.util.function.Function;
+
 import io.rsocket.ConnectionSetupPayload;
+import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
+import io.rsocket.routing.broker.RSocketIndex;
+import io.rsocket.routing.broker.RoutingTable;
+import io.rsocket.routing.broker.locator.RSocketLocator;
+import io.rsocket.routing.broker.rsocket.RoutingRSocket;
+import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.frames.RouteSetup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 public class BrokerSocketAcceptor implements SocketAcceptor {
+	protected static final Logger logger = LoggerFactory
+			.getLogger(BrokerSocketAcceptor.class);
+
+	protected final RoutingTable routingTable;
+	protected final RSocketIndex rSocketIndex;
+	protected final RSocketLocator rSocketLocator;
+	protected final Function<ConnectionSetupPayload, RouteSetup> routeSetupExtractor;
+	protected final Function<Payload, Tags> tagsExtractor;
+
+	public BrokerSocketAcceptor(RoutingTable routingTable, RSocketIndex rSocketIndex, RSocketLocator rSocketLocator, Function<ConnectionSetupPayload, RouteSetup> routeSetupExtractor, Function<Payload, Tags> tagsExtractor) {
+		this.routingTable = routingTable;
+		this.rSocketIndex = rSocketIndex;
+		this.rSocketLocator = rSocketLocator;
+		this.routeSetupExtractor = routeSetupExtractor;
+		this.tagsExtractor = tagsExtractor;
+	}
+
 	@Override
 	public Mono<RSocket> accept(ConnectionSetupPayload setup, RSocket sendingSocket) {
-		return null;
+		try {
+			RouteSetup routeSetup = routeSetupExtractor.apply(setup);
+
+			if (routeSetup != null) {
+				// TODO: metrics
+				// TODO: error on disconnect?
+				return Mono.defer(() -> {
+					// TODO: deal with existing connection for routeSetup.routeId
+					RoutingRSocket receivingSocket = new RoutingRSocket(rSocketLocator, tagsExtractor);
+
+					// TODO: enrich tags with routeId and serviceName
+					// update routing table with incoming route.
+					routingTable.add(routeSetup);
+
+					// adds sendingSocket to rSocketIndex for later lookup
+					rSocketIndex.put(routeSetup.getRouteId(), sendingSocket, routeSetup
+							.getTags());
+
+					return Mono.fromSupplier(() -> receivingSocket);
+				});
+			}
+
+			throw new IllegalStateException(RouteSetup.METADATA_KEY + " not found in metadata");
+		}
+		catch (Exception e) {
+			logger.error("Error accepting setup", e);
+			return Mono.error(e);
+
+		}
 	}
 }

@@ -1,13 +1,15 @@
 description = 'RSocket Routing Broker'
 
 dependencies {
+	implementation 'io.projectreactor.netty:reactor-netty'
 	implementation "io.rsocket:rsocket-core"
 	implementation "io.rsocket.routing:rsocket-routing-common"
 	implementation "io.rsocket.routing:rsocket-routing-frames"
 	implementation "org.agrona:agrona"
 	implementation 'org.roaringbitmap:RoaringBitmap'
+	implementation 'org.slf4j:slf4j-api'
 
-	implementation 'io.projectreactor.netty:reactor-netty'
-	testImplementation 'org.junit.jupiter:junit-jupiter'
 	testImplementation 'org.assertj:assertj-core'
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testImplementation 'org.slf4j:slf4j-simple'
 }
