@@ -1,3 +1,4 @@
 # Auto Configure
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-io.rsocket.routing.broker.spring.RoutingBrokerAutoConfiguration
+io.rsocket.routing.broker.spring.BrokerRSocketStrategiesAutoConfiguration,\
+io.rsocket.routing.broker.spring.BrokerAutoConfiguration

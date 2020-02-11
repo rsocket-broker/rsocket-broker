@@ -20,18 +20,24 @@ import java.util.stream.Collectors;
 
 import io.rsocket.SocketAcceptor;
 import io.rsocket.routing.broker.Broker;
+import io.rsocket.routing.broker.RSocketIndex;
+import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
 import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
 import io.rsocket.routing.broker.config.AbstractBrokerProperties;
 import io.rsocket.routing.broker.config.ClusterBrokerProperties;
 import io.rsocket.routing.broker.config.TcpBrokerProperties;
 import io.rsocket.routing.broker.config.WebsocketBrokerProperties;
+import io.rsocket.routing.frames.RouteSetup;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.rsocket.RSocketStrategiesAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.PropertyMapper;
@@ -41,19 +47,63 @@ import org.springframework.boot.rsocket.netty.NettyRSocketServerFactory;
 import org.springframework.boot.rsocket.server.RSocketServer;
 import org.springframework.boot.rsocket.server.RSocketServerFactory;
 import org.springframework.boot.rsocket.server.ServerRSocketFactoryProcessor;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorResourceFactory;
+import org.springframework.messaging.rsocket.DefaultMetadataExtractor;
+import org.springframework.messaging.rsocket.MetadataExtractor;
+import org.springframework.messaging.rsocket.RSocketStrategies;
+import org.springframework.util.MimeType;
+
+import static io.rsocket.routing.frames.RouteSetup.ROUTE_SETUP;
 
 @Configuration
 @EnableConfigurationProperties
-public class RoutingBrokerAutoConfiguration {
+@AutoConfigureAfter(RSocketStrategiesAutoConfiguration.class)
+public class BrokerAutoConfiguration implements InitializingBean {
 
 	public static final String BROKER_PREFIX = "io.rsocket.routing.broker";
 
+	/**
+	 * Route Setup mime type.
+	 */
+	public static final MimeType ROUTE_SETUP_MIME_TYPE = new MimeType("message",
+			ROUTE_SETUP);
+
+	private final ApplicationContext context;
+
+	public BrokerAutoConfiguration(ApplicationContext context) {
+		this.context = context;
+	}
+
+	@Override
+	public void afterPropertiesSet() {
+		RSocketStrategies rSocketStrategies = this.context
+				.getBean(RSocketStrategies.class);
+		MetadataExtractor metadataExtractor = rSocketStrategies.metadataExtractor();
+
+		if (metadataExtractor instanceof DefaultMetadataExtractor) {
+			DefaultMetadataExtractor extractor = (DefaultMetadataExtractor) metadataExtractor;
+			extractor.metadataToExtract(ROUTE_SETUP_MIME_TYPE, RouteSetup.class,
+					RouteSetup.METADATA_KEY);
+		}
+	}
+
 	@Bean
+	// TODO: Broker class needed?
 	public Broker broker() {
 		return new Broker();
+	}
+
+	@Bean
+	public RSocketIndex rSocketIndex() {
+		return new RSocketIndex();
+	}
+
+	@Bean
+	public RoutingTable routingTable() {
+		return new RoutingTable();
 	}
 
 	@Bean
@@ -63,8 +113,9 @@ public class RoutingBrokerAutoConfiguration {
 	}
 
 	@Bean
-	public BrokerSocketAcceptor brokerSocketAcceptor() {
-		return new BrokerSocketAcceptor();
+	public BrokerSocketAcceptor brokerSocketAcceptor(RSocketStrategies rSocketStrategies, RoutingTable routingTable, RSocketIndex rSocketIndex) {
+		return new SpringBrokerSocketAcceptor(rSocketStrategies
+				.metadataExtractor(), routingTable, rSocketIndex);
 	}
 
 	private static RSocketServerFactory getRSocketServerFactory(ReactorResourceFactory resourceFactory,
