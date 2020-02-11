@@ -28,6 +28,8 @@ import io.rsocket.routing.broker.config.AbstractBrokerProperties;
 import io.rsocket.routing.broker.config.ClusterBrokerProperties;
 import io.rsocket.routing.broker.config.TcpBrokerProperties;
 import io.rsocket.routing.broker.config.WebsocketBrokerProperties;
+import io.rsocket.routing.broker.locator.RemoteRSocketLocator;
+import io.rsocket.routing.frames.Address;
 import io.rsocket.routing.frames.RouteSetup;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,22 +56,13 @@ import org.springframework.http.client.reactive.ReactorResourceFactory;
 import org.springframework.messaging.rsocket.DefaultMetadataExtractor;
 import org.springframework.messaging.rsocket.MetadataExtractor;
 import org.springframework.messaging.rsocket.RSocketStrategies;
-import org.springframework.util.MimeType;
-
-import static io.rsocket.routing.frames.RouteSetup.ROUTE_SETUP;
 
 @Configuration
 @EnableConfigurationProperties
-@AutoConfigureAfter(RSocketStrategiesAutoConfiguration.class)
+@AutoConfigureAfter({RSocketStrategiesAutoConfiguration.class, BrokerRSocketStrategiesAutoConfiguration.class})
 public class BrokerAutoConfiguration implements InitializingBean {
 
 	public static final String BROKER_PREFIX = "io.rsocket.routing.broker";
-
-	/**
-	 * Route Setup mime type.
-	 */
-	public static final MimeType ROUTE_SETUP_MIME_TYPE = new MimeType("message",
-			ROUTE_SETUP);
 
 	private final ApplicationContext context;
 
@@ -85,7 +78,9 @@ public class BrokerAutoConfiguration implements InitializingBean {
 
 		if (metadataExtractor instanceof DefaultMetadataExtractor) {
 			DefaultMetadataExtractor extractor = (DefaultMetadataExtractor) metadataExtractor;
-			extractor.metadataToExtract(ROUTE_SETUP_MIME_TYPE, RouteSetup.class,
+			extractor.metadataToExtract(MimeTypes.ADDRESS_MIME_TYPE, Address.class,
+					Address.METADATA_KEY);
+			extractor.metadataToExtract(MimeTypes.ROUTE_SETUP_MIME_TYPE, RouteSetup.class,
 					RouteSetup.METADATA_KEY);
 		}
 	}
@@ -108,14 +103,21 @@ public class BrokerAutoConfiguration implements InitializingBean {
 
 	@Bean
 	@ConditionalOnMissingBean
-	ReactorResourceFactory reactorResourceFactory() {
+	public ReactorResourceFactory reactorResourceFactory() {
 		return new ReactorResourceFactory();
 	}
 
 	@Bean
-	public BrokerSocketAcceptor brokerSocketAcceptor(RSocketStrategies rSocketStrategies, RoutingTable routingTable, RSocketIndex rSocketIndex) {
-		return new SpringBrokerSocketAcceptor(rSocketStrategies
-				.metadataExtractor(), routingTable, rSocketIndex);
+	public RemoteRSocketLocator remoteRSocketLocator(RoutingTable routingTable, RSocketIndex index) {
+		return new RemoteRSocketLocator(routingTable, index);
+	}
+
+	@Bean
+	public MetadataExtractorBrokerSocketAcceptor metadataExtractorBrokerSocketAcceptor(
+			RSocketStrategies rSocketStrategies, RoutingTable routingTable,
+			RSocketIndex rSocketIndex, RemoteRSocketLocator locator) {
+		return new MetadataExtractorBrokerSocketAcceptor(routingTable, rSocketIndex, locator,
+				rSocketStrategies.metadataExtractor());
 	}
 
 	private static RSocketServerFactory getRSocketServerFactory(ReactorResourceFactory resourceFactory,
