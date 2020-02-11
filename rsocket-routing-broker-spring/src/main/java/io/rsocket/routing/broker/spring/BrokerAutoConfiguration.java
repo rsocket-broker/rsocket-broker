@@ -29,6 +29,8 @@ import io.rsocket.routing.broker.config.ClusterBrokerProperties;
 import io.rsocket.routing.broker.config.TcpBrokerProperties;
 import io.rsocket.routing.broker.config.WebsocketBrokerProperties;
 import io.rsocket.routing.broker.locator.RemoteRSocketLocator;
+import io.rsocket.routing.broker.spring.cluster.ClusterController;
+import io.rsocket.routing.broker.spring.cluster.MessageHandlerClusterSocketAcceptor;
 import io.rsocket.routing.frames.Address;
 import io.rsocket.routing.frames.RouteSetup;
 import org.apache.commons.logging.Log;
@@ -56,6 +58,7 @@ import org.springframework.http.client.reactive.ReactorResourceFactory;
 import org.springframework.messaging.rsocket.DefaultMetadataExtractor;
 import org.springframework.messaging.rsocket.MetadataExtractor;
 import org.springframework.messaging.rsocket.RSocketStrategies;
+import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler;
 
 @Configuration
 @EnableConfigurationProperties
@@ -150,8 +153,13 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		public static final String PREFIX = BROKER_PREFIX + ".cluster";
 
 		@Bean
-		public ClusterSocketAcceptor clusterSocketAcceptor() {
-			return new ClusterSocketAcceptor();
+		public ClusterController clusterController() {
+			return new ClusterController();
+		}
+
+		@Bean
+		public ClusterSocketAcceptor clusterSocketAcceptor(RSocketMessageHandler messageHandler) {
+			return new MessageHandlerClusterSocketAcceptor(messageHandler);
 		}
 
 		@Bean
