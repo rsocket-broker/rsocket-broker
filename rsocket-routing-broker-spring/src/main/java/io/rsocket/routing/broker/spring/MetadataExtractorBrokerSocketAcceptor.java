@@ -42,15 +42,15 @@ public class MetadataExtractorBrokerSocketAcceptor extends BrokerSocketAcceptor 
 			Map<String, Object> setupMetadata = metadataExtractor.extract(connectionSetupPayload,
 					MimeType.valueOf(connectionSetupPayload.metadataMimeType()));
 
-			if (setupMetadata.containsKey(RouteSetup.METADATA_KEY)) {
-				return (RouteSetup) setupMetadata.get(RouteSetup.METADATA_KEY);
+			if (setupMetadata.containsKey(MimeTypes.ROUTING_FRAME_METADATA_KEY)) {
+				return (RouteSetup) setupMetadata.get(MimeTypes.ROUTING_FRAME_METADATA_KEY);
 			}
 			return null;
 		}, payload -> {
 			Map<String, Object> payloadMetadata = metadataExtractor
 					.extract(payload, COMPOSITE_MIME_TYPE);
-			if (payloadMetadata.containsKey(Address.METADATA_KEY)) {
-				Address address = (Address) payloadMetadata.get(Address.METADATA_KEY);
+			if (payloadMetadata.containsKey(MimeTypes.ROUTING_FRAME_METADATA_KEY)) {
+				Address address = (Address) payloadMetadata.get(MimeTypes.ROUTING_FRAME_METADATA_KEY);
 				return address.getTags();
 			}
 

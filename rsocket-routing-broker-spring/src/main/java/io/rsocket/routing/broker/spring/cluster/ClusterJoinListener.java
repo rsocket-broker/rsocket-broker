@@ -52,11 +52,11 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 					.from(properties.getBrokerId()).build();
 			// TODO: tags
 
-			logger.info("connectiong to {}", broker);
+			logger.info("connecting to {}", broker);
 
 			// TODO: micrometer
 			RSocketRequester.builder().rsocketStrategies(strategies)
-					.dataMimeType(MimeTypes.BROKER_INFO_MIME_TYPE)
+					.dataMimeType(MimeTypes.ROUTING_FRAME_MIME_TYPE)
 					.setupData(brokerInfo)
 					//.rsocketFactory(rsocketFactory -> rsocketFactory
 					//		.acceptor(brokerSocketAcceptor()))

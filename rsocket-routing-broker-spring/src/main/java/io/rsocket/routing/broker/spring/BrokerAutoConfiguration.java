@@ -33,8 +33,7 @@ import io.rsocket.routing.broker.locator.RemoteRSocketLocator;
 import io.rsocket.routing.broker.spring.cluster.ClusterController;
 import io.rsocket.routing.broker.spring.cluster.ClusterJoinListener;
 import io.rsocket.routing.broker.spring.cluster.MessageHandlerClusterSocketAcceptor;
-import io.rsocket.routing.frames.Address;
-import io.rsocket.routing.frames.RouteSetup;
+import io.rsocket.routing.frames.RoutingFrame;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -83,10 +82,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 
 		if (metadataExtractor instanceof DefaultMetadataExtractor) {
 			DefaultMetadataExtractor extractor = (DefaultMetadataExtractor) metadataExtractor;
-			extractor.metadataToExtract(MimeTypes.ADDRESS_MIME_TYPE, Address.class,
-					Address.METADATA_KEY);
-			extractor.metadataToExtract(MimeTypes.ROUTE_SETUP_MIME_TYPE, RouteSetup.class,
-					RouteSetup.METADATA_KEY);
+			extractor.metadataToExtract(MimeTypes.ROUTING_FRAME_MIME_TYPE, RoutingFrame.class,
+					MimeTypes.ROUTING_FRAME_METADATA_KEY);
 		}
 	}
 

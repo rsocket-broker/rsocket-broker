@@ -78,7 +78,7 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 				});
 			}
 
-			throw new IllegalStateException(RouteSetup.METADATA_KEY + " not found in metadata");
+			throw new IllegalStateException("RouteSetup not found in metadata");
 		}
 		catch (Exception e) {
 			logger.error("Error accepting setup", e);
