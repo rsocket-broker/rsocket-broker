@@ -16,16 +16,37 @@
 
 package io.rsocket.routing.broker.spring.cluster;
 
+import io.rsocket.routing.frames.BrokerInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.rsocket.RSocketRequester;
+import org.springframework.messaging.rsocket.annotation.ConnectMapping;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
 public class ClusterController {
 
+	private final Logger logger = LoggerFactory.getLogger(getClass());
+
 	public ClusterController() {
 		System.out.println();
+	}
+
+	@ConnectMapping
+	public void onConnect(BrokerInfo brokerInfo, RSocketRequester rSocketRequester) {
+		brokerInfo(brokerInfo, rSocketRequester);
+	}
+
+	@RequestMapping("cluster.broker-info")
+	public boolean brokerInfo(BrokerInfo brokerInfo, RSocketRequester rSocketRequester) {
+		logger.info("received connection from {}", brokerInfo);
+		// TODO: store broker info
+		// TODO: send BrokerInfo back
+		return false;
 	}
 
 	@MessageMapping("hello")

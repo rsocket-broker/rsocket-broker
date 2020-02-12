@@ -22,6 +22,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.rsocket.routing.frames.Address;
 import io.rsocket.routing.frames.AddressFlyweight;
+import io.rsocket.routing.frames.BrokerInfo;
+import io.rsocket.routing.frames.BrokerInfoFlyweight;
 import io.rsocket.routing.frames.RouteSetup;
 import io.rsocket.routing.frames.RouteSetupFlyweight;
 import org.reactivestreams.Publisher;
@@ -50,97 +52,136 @@ import static io.rsocket.routing.broker.spring.MimeTypes.ROUTE_SETUP_MIME_TYPE;
 public class BrokerRSocketStrategiesAutoConfiguration {
 	@Bean
 	public RSocketStrategiesCustomizer gatewayRSocketStrategiesCustomizer() {
-		return strategies -> strategies.decoder(new AddressDecoder(), new RouteSetupDecoder())
-				.encoder(new AddressEncoder(), new RouteSetupEncoder());
+		return strategies -> strategies.decoder(new AddressDecoder(), new BrokerInfoDecoder(), new RouteSetupDecoder())
+				.encoder(new AddressEncoder(), new BrokerInfoEncoder(), new RouteSetupEncoder());
 	}
 
-	private static class RouteSetupEncoder extends AbstractEncoder<RouteSetup> {
+	private static abstract class AbstractBrokerEncoder<T> extends AbstractEncoder<T> {
+
+		protected AbstractBrokerEncoder(MimeType... supportedMimeTypes) {
+			super(supportedMimeTypes);
+		}
+
+		@Override
+		public Flux<DataBuffer> encode(Publisher<? extends T> inputStream,
+				DataBufferFactory bufferFactory, ResolvableType elementType,
+				MimeType mimeType, Map<String, Object> hints) {
+			throw new UnsupportedOperationException("stream encoding not supported.");
+		}
+
+		@Override
+		public DataBuffer encodeValue(T value, DataBufferFactory bufferFactory,
+				ResolvableType valueType, MimeType mimeType, Map<String, Object> hints) {
+			NettyDataBufferFactory factory = (NettyDataBufferFactory) bufferFactory;
+			ByteBuf encoded = encodeValue(factory, value);
+			return factory.wrap(encoded);
+		}
+
+		protected abstract ByteBuf encodeValue(NettyDataBufferFactory factory, T value);
+	}
+
+	private static abstract class AbstractBrokerDecoder<T> extends AbstractDecoder<T> {
+
+		protected AbstractBrokerDecoder(MimeType... supportedMimeTypes) {
+			super(supportedMimeTypes);
+		}
+
+		@Override
+		public Flux<T> decode(Publisher<DataBuffer> inputStream,
+				ResolvableType elementType, MimeType mimeType,
+				Map<String, Object> hints) {
+			throw new UnsupportedOperationException("stream decoding not supported.");
+		}
+
+		@Override
+		public T decode(DataBuffer buffer, ResolvableType targetType,
+				MimeType mimeType, Map<String, Object> hints) throws DecodingException {
+			return decode(asByteBuf(buffer));
+		}
+
+		protected abstract T decode(ByteBuf byteBuf);
+	}
+
+	private static class RouteSetupEncoder extends AbstractBrokerEncoder<RouteSetup> {
 
 		public RouteSetupEncoder() {
 			super(ROUTE_SETUP_MIME_TYPE);
 		}
 
 		@Override
-		public Flux<DataBuffer> encode(Publisher<? extends RouteSetup> inputStream,
-				DataBufferFactory bufferFactory, ResolvableType elementType,
-				MimeType mimeType, Map<String, Object> hints) {
-			throw new UnsupportedOperationException("stream encoding not supported.");
-		}
-
-		@Override
-		public DataBuffer encodeValue(RouteSetup value, DataBufferFactory bufferFactory,
-				ResolvableType valueType, MimeType mimeType, Map<String, Object> hints) {
-			NettyDataBufferFactory factory = (NettyDataBufferFactory) bufferFactory;
-			ByteBuf encoded = RouteSetupFlyweight
+		protected ByteBuf encodeValue(NettyDataBufferFactory factory, RouteSetup value) {
+			return RouteSetupFlyweight
 					.encode(factory.getByteBufAllocator(), value.getRouteId(), value
 							.getServiceName(), value.getTags());
-			return factory.wrap(encoded);
 		}
 
 	}
 
-	private static class RouteSetupDecoder extends AbstractDecoder<RouteSetup> {
+	private static class RouteSetupDecoder extends AbstractBrokerDecoder<RouteSetup> {
 
 		public RouteSetupDecoder() {
 			super(ROUTE_SETUP_MIME_TYPE);
 		}
 
 		@Override
-		public Flux<RouteSetup> decode(Publisher<DataBuffer> inputStream,
-				ResolvableType elementType, MimeType mimeType,
-				Map<String, Object> hints) {
-			throw new UnsupportedOperationException("stream decoding not supported.");
-		}
-
-		@Override
-		public RouteSetup decode(DataBuffer buffer, ResolvableType targetType,
-				MimeType mimeType, Map<String, Object> hints) throws DecodingException {
-			return RouteSetup.from(asByteBuf(buffer));
+		protected RouteSetup decode(ByteBuf byteBuf) {
+			return RouteSetup.from(byteBuf);
 		}
 
 	}
-	private static class AddressEncoder extends AbstractEncoder<Address> {
+
+	private static class AddressEncoder extends AbstractBrokerEncoder<Address> {
 
 		public AddressEncoder() {
 			super(ADDRESS_MIME_TYPE);
 		}
 
 		@Override
-		public Flux<DataBuffer> encode(Publisher<? extends Address> inputStream,
-				DataBufferFactory bufferFactory, ResolvableType elementType,
-				MimeType mimeType, Map<String, Object> hints) {
-			throw new UnsupportedOperationException("stream encoding not supported.");
-		}
-
-		@Override
-		public DataBuffer encodeValue(Address value, DataBufferFactory bufferFactory,
-				ResolvableType valueType, MimeType mimeType, Map<String, Object> hints) {
-			NettyDataBufferFactory factory = (NettyDataBufferFactory) bufferFactory;
-			ByteBuf encoded = AddressFlyweight
+		protected ByteBuf encodeValue(NettyDataBufferFactory factory, Address value) {
+			return AddressFlyweight
 					.encode(factory.getByteBufAllocator(), value.getOriginRouteId(),
 							value.getMetadata(), value.getTags());
-			return factory.wrap(encoded);
 		}
 
 	}
 
-	private static class AddressDecoder extends AbstractDecoder<Address> {
+	private static class AddressDecoder extends AbstractBrokerDecoder<Address> {
 
 		public AddressDecoder() {
 			super(ADDRESS_MIME_TYPE);
 		}
 
 		@Override
-		public Flux<Address> decode(Publisher<DataBuffer> inputStream,
-				ResolvableType elementType, MimeType mimeType,
-				Map<String, Object> hints) {
-			throw new UnsupportedOperationException("stream decoding not supported.");
+		protected Address decode(ByteBuf byteBuf) {
+			return Address.from(byteBuf);
+		}
+
+	}
+
+	private static class BrokerInfoEncoder extends AbstractBrokerEncoder<BrokerInfo> {
+
+		public BrokerInfoEncoder() {
+			super(MimeTypes.BROKER_INFO_MIME_TYPE);
 		}
 
 		@Override
-		public Address decode(DataBuffer buffer, ResolvableType targetType,
-				MimeType mimeType, Map<String, Object> hints) throws DecodingException {
-			return Address.from(asByteBuf(buffer));
+		protected ByteBuf encodeValue(NettyDataBufferFactory factory, BrokerInfo value) {
+			return BrokerInfoFlyweight
+					.encode(factory.getByteBufAllocator(), value.getBrokerId(),
+							value.getTimestamp(), value.getTags());
+		}
+
+	}
+
+	private static class BrokerInfoDecoder extends AbstractBrokerDecoder<BrokerInfo> {
+
+		public BrokerInfoDecoder() {
+			super(MimeTypes.BROKER_INFO_MIME_TYPE);
+		}
+
+		@Override
+		protected BrokerInfo decode(ByteBuf byteBuf) {
+			return BrokerInfo.from(byteBuf);
 		}
 
 	}
