@@ -16,45 +16,17 @@
 
 package io.rsocket.routing.broker.spring;
 
-import io.rsocket.routing.frames.Address;
-import io.rsocket.routing.frames.BrokerInfo;
-import io.rsocket.routing.frames.RouteJoin;
-import io.rsocket.routing.frames.RouteRemove;
-import io.rsocket.routing.frames.RouteSetup;
-
 import org.springframework.util.MimeType;
 
 public abstract class MimeTypes {
 
+	public static final String SUB_TYPE = "x.rsocket.routing.frame.v0";
 	/**
 	 * Address mime type.
 	 */
-	public static final MimeType ADDRESS_MIME_TYPE = new MimeType("message",
-			Address.ADDRESS);
-
-	/**
-	 * Address mime type.
-	 */
-	public static final MimeType BROKER_INFO_MIME_TYPE = new MimeType("message",
-			BrokerInfo.BROKER_INFO);
-
-	/**
-	 * Address mime type.
-	 */
-	public static final MimeType ROUTE_JOIN_MIME_TYPE = new MimeType("message",
-			RouteJoin.ROUTE_JOIN);
-
-	/**
-	 * Address mime type.
-	 */
-	public static final MimeType ROUTE_REMOVE_MIME_TYPE = new MimeType("message",
-			RouteRemove.ROUTE_REMOVE);
-
-	/**
-	 * Route Setup mime type.
-	 */
-	public static final MimeType ROUTE_SETUP_MIME_TYPE = new MimeType("message",
-			RouteSetup.ROUTE_SETUP);
+	public static final MimeType ROUTING_FRAME_MIME_TYPE = new MimeType("message",
+			SUB_TYPE);
+	public static final String ROUTING_FRAME_METADATA_KEY = "routingframe";
 
 	private MimeTypes() {
 

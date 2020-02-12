@@ -48,7 +48,8 @@ import reactor.core.publisher.Hooks;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
@@ -60,7 +61,8 @@ import org.springframework.messaging.rsocket.RSocketStrategies;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.rsocket.routing.broker.spring.MetadataExtractorBrokerSocketAcceptor.COMPOSITE_MIME_TYPE;
 
-@SpringBootApplication
+@SpringBootConfiguration
+@EnableAutoConfiguration
 public class PingPongApp {
 
 	@Bean
@@ -111,7 +113,7 @@ public class PingPongApp {
 		ByteBuf routeSetup = RouteSetupFlyweight
 				.encode(ByteBufAllocator.DEFAULT, routeId, serviceName, tags);
 
-		CompositeByteBuf composite = encodeComposite(routeSetup, MimeTypes.ROUTE_SETUP_MIME_TYPE.toString());
+		CompositeByteBuf composite = encodeComposite(routeSetup, MimeTypes.ROUTING_FRAME_MIME_TYPE.toString());
 		return composite;
 	}
 
@@ -121,7 +123,7 @@ public class PingPongApp {
 		ByteBuf address = AddressFlyweight
 				.encode(ByteBufAllocator.DEFAULT, originRouteId, Tags.empty(), tags);
 
-		CompositeByteBuf composite = encodeComposite(address, MimeTypes.ADDRESS_MIME_TYPE.toString());
+		CompositeByteBuf composite = encodeComposite(address, MimeTypes.ROUTING_FRAME_MIME_TYPE.toString());
 		return composite;
 	}
 

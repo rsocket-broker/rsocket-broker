@@ -19,13 +19,21 @@ package io.rsocket.routing.broker.spring;
 import java.util.Map;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.rsocket.routing.frames.Address;
 import io.rsocket.routing.frames.AddressFlyweight;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.BrokerInfoFlyweight;
+import io.rsocket.routing.frames.FrameHeaderFlyweight;
+import io.rsocket.routing.frames.FrameType;
+import io.rsocket.routing.frames.RouteJoin;
+import io.rsocket.routing.frames.RouteJoinFlyweight;
+import io.rsocket.routing.frames.RouteRemove;
+import io.rsocket.routing.frames.RouteRemoveFlyweight;
 import io.rsocket.routing.frames.RouteSetup;
 import io.rsocket.routing.frames.RouteSetupFlyweight;
+import io.rsocket.routing.frames.RoutingFrame;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 
@@ -44,146 +52,99 @@ import org.springframework.core.io.buffer.NettyDataBuffer;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
 import org.springframework.util.MimeType;
 
-import static io.rsocket.routing.broker.spring.MimeTypes.ADDRESS_MIME_TYPE;
-import static io.rsocket.routing.broker.spring.MimeTypes.ROUTE_SETUP_MIME_TYPE;
+import static io.rsocket.routing.broker.spring.MimeTypes.ROUTING_FRAME_MIME_TYPE;
 
 @Configuration
 @AutoConfigureBefore(RSocketStrategiesAutoConfiguration.class)
 public class BrokerRSocketStrategiesAutoConfiguration {
 	@Bean
 	public RSocketStrategiesCustomizer brokerRSocketStrategiesCustomizer() {
-		return strategies -> strategies.decoder(new AddressDecoder(), new BrokerInfoDecoder(), new RouteSetupDecoder())
-				.encoder(new AddressEncoder(), new BrokerInfoEncoder(), new RouteSetupEncoder());
+		return strategies -> strategies
+				.decoder(new RoutingFrameDecoder())
+				.encoder(new RoutingFrameEncoder());
 	}
 
-	private static abstract class AbstractBrokerEncoder<T> extends AbstractEncoder<T> {
+	private static class RoutingFrameEncoder extends AbstractEncoder<RoutingFrame> {
 
-		protected AbstractBrokerEncoder(MimeType... supportedMimeTypes) {
-			super(supportedMimeTypes);
+		public RoutingFrameEncoder() {
+			super(ROUTING_FRAME_MIME_TYPE);
 		}
 
 		@Override
-		public Flux<DataBuffer> encode(Publisher<? extends T> inputStream,
-				DataBufferFactory bufferFactory, ResolvableType elementType,
-				MimeType mimeType, Map<String, Object> hints) {
+		public Flux<DataBuffer> encode(Publisher<? extends RoutingFrame> inputStream, DataBufferFactory bufferFactory, ResolvableType elementType, MimeType mimeType, Map<String, Object> hints) {
 			return Flux.from(inputStream).map(value -> encodeValue(value, bufferFactory,
-					elementType, mimeType, hints));
-		}
+					elementType, mimeType, hints));		}
 
 		@Override
-		public DataBuffer encodeValue(T value, DataBufferFactory bufferFactory,
-				ResolvableType valueType, MimeType mimeType, Map<String, Object> hints) {
+		public DataBuffer encodeValue(RoutingFrame routingFrame, DataBufferFactory bufferFactory, ResolvableType valueType, MimeType mimeType, Map<String, Object> hints) {
 			NettyDataBufferFactory factory = (NettyDataBufferFactory) bufferFactory;
-			ByteBuf encoded = encodeValue(factory, value);
-			return factory.wrap(encoded);
-		}
 
-		protected abstract ByteBuf encodeValue(NettyDataBufferFactory factory, T value);
+			ByteBufAllocator allocator = factory.getByteBufAllocator();
+			switch (routingFrame.getFrameType()) {
+			case ADDRESS:
+				Address address = (Address) routingFrame;
+				return factory.wrap(AddressFlyweight
+						.encode(allocator, address.getOriginRouteId(),
+								address.getMetadata(), address.getTags()));
+			case BROKER_INFO:
+				BrokerInfo brokerInfo = (BrokerInfo) routingFrame;
+				return factory.wrap(BrokerInfoFlyweight
+						.encode(allocator, brokerInfo.getBrokerId(),
+								brokerInfo.getTimestamp(), brokerInfo.getTags()));
+			case ROUTE_JOIN:
+				RouteJoin routeJoin = (RouteJoin) routingFrame;
+				return factory
+						.wrap(RouteJoinFlyweight.encode(allocator,
+								routeJoin.getBrokerId(), routeJoin.getRouteId(), routeJoin
+										.getTimestamp(),
+								routeJoin.getServiceName(), routeJoin.getTags()));
+			case ROUTE_REMOVE:
+				RouteRemove routeRemove = (RouteRemove) routingFrame;
+				return factory
+						.wrap(RouteRemoveFlyweight.encode(allocator,
+								routeRemove.getBrokerId(), routeRemove
+										.getRouteId(), routeRemove.getTimestamp()));
+			case ROUTE_SETUP:
+				RouteSetup routeSetup = (RouteSetup) routingFrame;
+				return factory
+						.wrap(RouteSetupFlyweight.encode(allocator,
+								routeSetup.getRouteId(), routeSetup
+										.getServiceName(), routeSetup.getTags()));
+			}
+			throw new IllegalArgumentException("Unknown FrameType " + routingFrame
+					.getFrameType());
+		}
 	}
 
-	private static abstract class AbstractBrokerDecoder<T> extends AbstractDecoder<T> {
+	private static class RoutingFrameDecoder extends AbstractDecoder<RoutingFrame> {
 
-		protected AbstractBrokerDecoder(MimeType... supportedMimeTypes) {
-			super(supportedMimeTypes);
+		public RoutingFrameDecoder() {
+			super(ROUTING_FRAME_MIME_TYPE);
 		}
 
 		@Override
-		public Flux<T> decode(Publisher<DataBuffer> inputStream,
-				ResolvableType elementType, MimeType mimeType,
-				Map<String, Object> hints) {
-			return Flux.from(inputStream).map(dataBuffer -> decode(dataBuffer, elementType,
-					mimeType, hints));
+		public Flux<RoutingFrame> decode(Publisher<DataBuffer> inputStream, ResolvableType elementType, MimeType mimeType, Map<String, Object> hints) {
+			return Flux.from(inputStream)
+					.map(dataBuffer -> decode(dataBuffer, elementType, mimeType, hints));
 		}
 
 		@Override
-		public T decode(DataBuffer buffer, ResolvableType targetType,
-				MimeType mimeType, Map<String, Object> hints) throws DecodingException {
-			return decode(asByteBuf(buffer));
-		}
-
-		protected abstract T decode(ByteBuf byteBuf);
-	}
-
-	private static class RouteSetupEncoder extends AbstractBrokerEncoder<RouteSetup> {
-
-		public RouteSetupEncoder() {
-			super(ROUTE_SETUP_MIME_TYPE);
-		}
-
-		@Override
-		protected ByteBuf encodeValue(NettyDataBufferFactory factory, RouteSetup value) {
-			return RouteSetupFlyweight
-					.encode(factory.getByteBufAllocator(), value.getRouteId(), value
-							.getServiceName(), value.getTags());
-		}
-
-	}
-
-	private static class RouteSetupDecoder extends AbstractBrokerDecoder<RouteSetup> {
-
-		public RouteSetupDecoder() {
-			super(ROUTE_SETUP_MIME_TYPE);
-		}
-
-		@Override
-		protected RouteSetup decode(ByteBuf byteBuf) {
-			return RouteSetup.from(byteBuf);
-		}
-
-	}
-
-	private static class AddressEncoder extends AbstractBrokerEncoder<Address> {
-
-		public AddressEncoder() {
-			super(ADDRESS_MIME_TYPE);
-		}
-
-		@Override
-		protected ByteBuf encodeValue(NettyDataBufferFactory factory, Address value) {
-			return AddressFlyweight
-					.encode(factory.getByteBufAllocator(), value.getOriginRouteId(),
-							value.getMetadata(), value.getTags());
-		}
-
-	}
-
-	private static class AddressDecoder extends AbstractBrokerDecoder<Address> {
-
-		public AddressDecoder() {
-			super(ADDRESS_MIME_TYPE);
-		}
-
-		@Override
-		protected Address decode(ByteBuf byteBuf) {
-			return Address.from(byteBuf);
-		}
-
-	}
-
-	private static class BrokerInfoEncoder extends AbstractBrokerEncoder<BrokerInfo> {
-
-		public BrokerInfoEncoder() {
-			super(MimeTypes.BROKER_INFO_MIME_TYPE);
-		}
-
-		@Override
-		protected ByteBuf encodeValue(NettyDataBufferFactory factory, BrokerInfo value) {
-			return BrokerInfoFlyweight
-					.encode(factory.getByteBufAllocator(), value.getBrokerId(),
-							value.getTimestamp(), value.getTags());
-		}
-
-	}
-
-	private static class BrokerInfoDecoder extends AbstractBrokerDecoder<BrokerInfo> {
-
-		public BrokerInfoDecoder() {
-			super(MimeTypes.BROKER_INFO_MIME_TYPE);
-		}
-
-		@Override
-		protected BrokerInfo decode(ByteBuf byteBuf) {
-			return BrokerInfo.from(byteBuf);
+		public RoutingFrame decode(DataBuffer buffer, ResolvableType targetType, MimeType mimeType, Map<String, Object> hints) throws DecodingException {
+			ByteBuf byteBuf = asByteBuf(buffer);
+			FrameType frameType = FrameHeaderFlyweight.frameType(byteBuf);
+			switch (frameType) {
+			case ADDRESS:
+				return Address.from(byteBuf);
+			case BROKER_INFO:
+				return BrokerInfo.from(byteBuf);
+			case ROUTE_JOIN:
+				return RouteJoin.from(byteBuf);
+			case ROUTE_REMOVE:
+				return RouteRemove.from(byteBuf);
+			case ROUTE_SETUP:
+				return RouteSetup.from(byteBuf);
+			}
+			throw new IllegalArgumentException("Unknown FrameType " + frameType);
 		}
 
 	}
