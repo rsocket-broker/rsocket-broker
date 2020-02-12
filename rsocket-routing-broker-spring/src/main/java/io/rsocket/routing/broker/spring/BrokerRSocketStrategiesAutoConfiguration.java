@@ -66,7 +66,8 @@ public class BrokerRSocketStrategiesAutoConfiguration {
 		public Flux<DataBuffer> encode(Publisher<? extends T> inputStream,
 				DataBufferFactory bufferFactory, ResolvableType elementType,
 				MimeType mimeType, Map<String, Object> hints) {
-			throw new UnsupportedOperationException("stream encoding not supported.");
+			return Flux.from(inputStream).map(value -> encodeValue(value, bufferFactory,
+					elementType, mimeType, hints));
 		}
 
 		@Override
@@ -90,7 +91,8 @@ public class BrokerRSocketStrategiesAutoConfiguration {
 		public Flux<T> decode(Publisher<DataBuffer> inputStream,
 				ResolvableType elementType, MimeType mimeType,
 				Map<String, Object> hints) {
-			throw new UnsupportedOperationException("stream decoding not supported.");
+			return Flux.from(inputStream).map(dataBuffer -> decode(dataBuffer, elementType,
+					mimeType, hints));
 		}
 
 		@Override
