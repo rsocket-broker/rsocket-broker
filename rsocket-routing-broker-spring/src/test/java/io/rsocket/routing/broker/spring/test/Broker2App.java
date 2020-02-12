@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
-package io.rsocket.routing.broker.config;
+package io.rsocket.routing.broker.spring.test;
 
-public class ClusterBrokerProperties extends AbstractBrokerProperties {
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 
-	public ClusterBrokerProperties() {
-		super(Transport.TCP);
-		setPort(7001);
-		setType("cluster");
+@SpringBootConfiguration
+@EnableAutoConfiguration
+public class Broker2App {
+
+	public static void main(String[] args) {
+		new SpringApplicationBuilder(Broker2App.class)
+				.properties("spring.config.name=broker2")
+				.run(args);
 	}
-
 }

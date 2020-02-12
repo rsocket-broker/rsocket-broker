@@ -1,0 +1,10 @@
+io.rsocket.routing.broker:
+  tcp.port: 8012
+  cluster.port: 7012
+  broker-id: 00000000-0000-0000-0000-000000000012
+  brokers:
+    - host: localhost
+      port: 7011
+
+logging.level:
+  io.rsocket.routing.broker: DEBUG

@@ -25,11 +25,13 @@ import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
 import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
 import io.rsocket.routing.broker.config.AbstractBrokerProperties;
+import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.config.ClusterBrokerProperties;
 import io.rsocket.routing.broker.config.TcpBrokerProperties;
 import io.rsocket.routing.broker.config.WebsocketBrokerProperties;
 import io.rsocket.routing.broker.locator.RemoteRSocketLocator;
 import io.rsocket.routing.broker.spring.cluster.ClusterController;
+import io.rsocket.routing.broker.spring.cluster.ClusterJoinListener;
 import io.rsocket.routing.broker.spring.cluster.MessageHandlerClusterSocketAcceptor;
 import io.rsocket.routing.frames.Address;
 import io.rsocket.routing.frames.RouteSetup;
@@ -95,6 +97,12 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
+	@ConfigurationProperties(BROKER_PREFIX)
+	public BrokerProperties brokerProperties() {
+		return new BrokerProperties();
+	}
+
+	@Bean
 	public RSocketIndex rSocketIndex() {
 		return new RSocketIndex();
 	}
@@ -155,6 +163,11 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		@Bean
 		public ClusterController clusterController() {
 			return new ClusterController();
+		}
+
+		@Bean
+		public ClusterJoinListener clusterJoinListener(BrokerProperties properties, RSocketStrategies strategies) {
+			return new ClusterJoinListener(properties, strategies);
 		}
 
 		@Bean
