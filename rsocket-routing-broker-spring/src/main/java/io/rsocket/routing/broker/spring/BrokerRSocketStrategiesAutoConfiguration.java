@@ -51,7 +51,7 @@ import static io.rsocket.routing.broker.spring.MimeTypes.ROUTE_SETUP_MIME_TYPE;
 @AutoConfigureBefore(RSocketStrategiesAutoConfiguration.class)
 public class BrokerRSocketStrategiesAutoConfiguration {
 	@Bean
-	public RSocketStrategiesCustomizer gatewayRSocketStrategiesCustomizer() {
+	public RSocketStrategiesCustomizer brokerRSocketStrategiesCustomizer() {
 		return strategies -> strategies.decoder(new AddressDecoder(), new BrokerInfoDecoder(), new RouteSetupDecoder())
 				.encoder(new AddressEncoder(), new BrokerInfoEncoder(), new RouteSetupEncoder());
 	}
