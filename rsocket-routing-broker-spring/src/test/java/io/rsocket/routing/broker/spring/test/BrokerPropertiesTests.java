@@ -17,13 +17,17 @@
 package io.rsocket.routing.broker.spring.test;
 
 import io.rsocket.routing.broker.config.BrokerProperties;
+import io.rsocket.routing.broker.spring.BrokerAutoConfiguration;
 import io.rsocket.routing.common.Id;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,8 +45,14 @@ public class BrokerPropertiesTests {
 	}
 
 	@SpringBootConfiguration
-	@EnableAutoConfiguration
+	@EnableConfigurationProperties
 	protected static class TestConfig {
+
+		@Bean
+		@ConfigurationProperties(BrokerAutoConfiguration.BROKER_PREFIX)
+		BrokerProperties brokerProperties() {
+			return new BrokerProperties();
+		}
 
 	}
 }
