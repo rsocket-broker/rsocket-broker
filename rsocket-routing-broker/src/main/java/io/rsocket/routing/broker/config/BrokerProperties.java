@@ -28,7 +28,7 @@ public class BrokerProperties {
 	/**
 	 * Broker Id.
 	 */
-	private Id brokerId;
+	private Id brokerId = Id.random();
 
 	private List<Broker> brokers = new ArrayList<>();
 
