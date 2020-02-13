@@ -58,20 +58,20 @@ public class RoutingTable implements Disposable {
 		}
 	}
 
-	public void add(RouteJoin routeSetup) {
-		logger.info("adding RouteJoin {}", routeSetup);
+	public void add(RouteJoin routeJoin) {
+		logger.info("adding RouteJoin {}", routeJoin);
 		synchronized (routes) {
-			routes.put(routeSetup.getRouteId(), routeSetup, routeSetup.getTags());
+			routes.put(routeJoin.getRouteId(), routeJoin, routeJoin.getTags());
 		}
-		joinEvents.onNext(routeSetup);
+		joinEvents.onNext(routeJoin);
 	}
 
 	public void remove(Id routeId) {
 		logger.info("removing routeId {}", routeId);
 		synchronized (routes) {
-			RouteJoin routeSetup = routes.remove(routeId);
-			if (routeSetup != null) {
-				leaveEvents.onNext(routeSetup);
+			RouteJoin routeJoin = routes.remove(routeId);
+			if (routeJoin != null) {
+				leaveEvents.onNext(routeJoin);
 			}
 		}
 	}
