@@ -23,7 +23,7 @@ import io.rsocket.routing.broker.util.IndexedMap;
 import io.rsocket.routing.broker.util.RoaringBitmapIndexedMap;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
-import io.rsocket.routing.frames.RouteSetup;
+import io.rsocket.routing.frames.RouteJoin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
@@ -32,34 +32,34 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 
 /**
- * Maintains index of RouteSetup objects. Actions include find, add and remove. Also
- * streams events with a RouteSetup is added or removed.
+ * Maintains index of RouteJoin objects. Actions include find, add and remove. Also
+ * streams events with a RouteJoin is added or removed.
  */
-// TODO: use some other object rather than RouteSetup
+// TODO: use some other object rather than RouteJoin
 public class RoutingTable implements Disposable {
 
 	private static final Logger logger = LoggerFactory.getLogger(RoutingTable.class);
 
-	private final IndexedMap<Id, RouteSetup, Tags> routes = new RoaringBitmapIndexedMap<>();
-	private final FluxProcessor<RouteSetup, RouteSetup> joinEvents =
-			DirectProcessor.<RouteSetup>create().serialize();
-	private final FluxProcessor<RouteSetup, RouteSetup> leaveEvents =
-			DirectProcessor.<RouteSetup>create().serialize();
+	private final IndexedMap<Id, RouteJoin, Tags> routes = new RoaringBitmapIndexedMap<>();
+	private final FluxProcessor<RouteJoin, RouteJoin> joinEvents =
+			DirectProcessor.<RouteJoin>create().serialize();
+	private final FluxProcessor<RouteJoin, RouteJoin> leaveEvents =
+			DirectProcessor.<RouteJoin>create().serialize();
 
-	public RouteSetup find(Id routeId) {
+	public RouteJoin find(Id routeId) {
 		synchronized (routes) {
 			return routes.get(routeId);
 		}
 	}
 
-	public List<RouteSetup> find(Tags tags) {
+	public List<RouteJoin> find(Tags tags) {
 		synchronized (routes) {
 			return routes.query(tags);
 		}
 	}
 
-	public void add(RouteSetup routeSetup) {
-		logger.info("adding RouteSetup {}", routeSetup);
+	public void add(RouteJoin routeSetup) {
+		logger.info("adding RouteJoin {}", routeSetup);
 		synchronized (routes) {
 			routes.put(routeSetup.getRouteId(), routeSetup, routeSetup.getTags());
 		}
@@ -69,18 +69,18 @@ public class RoutingTable implements Disposable {
 	public void remove(Id routeId) {
 		logger.info("removing routeId {}", routeId);
 		synchronized (routes) {
-			RouteSetup routeSetup = routes.remove(routeId);
+			RouteJoin routeSetup = routes.remove(routeId);
 			if (routeSetup != null) {
 				leaveEvents.onNext(routeSetup);
 			}
 		}
 	}
 
-	public Flux<RouteSetup> joinEvents(Tags tags) {
+	public Flux<RouteJoin> joinEvents(Tags tags) {
 		return joinEvents.filter(containsTags(tags));
 	}
 
-	public Flux<RouteSetup> leaveEvents(Tags tags) {
+	public Flux<RouteJoin> leaveEvents(Tags tags) {
 		return leaveEvents.filter(containsTags(tags));
 	}
 
@@ -89,7 +89,7 @@ public class RoutingTable implements Disposable {
 		routes.clear();
 	}
 
-	static Predicate<RouteSetup> containsTags(Tags tags) {
+	static Predicate<RouteJoin> containsTags(Tags tags) {
 		return event -> {
 			boolean contains = event.getTags().entries().containsAll(tags.entries());
 			return contains;

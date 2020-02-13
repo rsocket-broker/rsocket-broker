@@ -18,6 +18,7 @@ package io.rsocket.routing.broker;
 
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.frames.RouteJoin;
 import io.rsocket.routing.frames.RouteSetup;
 import org.junit.jupiter.api.Test;
 
@@ -29,17 +30,20 @@ public class RoutingTableTests {
 	public void containsTagsWorks() {
 		Tags tags = Tags.builder().with("key1", "key1value").with("key2", "key2value")
 				.buildTags();
-		RouteSetup routeSetup = RouteSetup.from(Id.random(), "myservice")
+		RouteJoin routeJoin = RouteJoin.builder()
+				.routeId(Id.random())
+				.brokerId(Id.random())
+				.serviceName("myservice")
 				.with("key2", "key2value")
 				.with("key1", "key1value")
 				.with("key3", "key3value")
 				.build();
-		boolean test = RoutingTable.containsTags(tags).test(routeSetup);
+		boolean test = RoutingTable.containsTags(tags).test(routeJoin);
 		assertThat(test).isTrue();
 
 		Tags tags2 = Tags.builder().with("key1", "key1value").with("key4", "key4value")
 				.buildTags();
-		boolean test2 = RoutingTable.containsTags(tags2).test(routeSetup);
+		boolean test2 = RoutingTable.containsTags(tags2).test(routeJoin);
 		assertThat(test2).isFalse();
 
 	}

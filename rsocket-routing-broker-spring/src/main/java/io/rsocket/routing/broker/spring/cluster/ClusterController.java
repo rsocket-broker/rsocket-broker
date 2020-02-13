@@ -16,37 +16,93 @@
 
 package io.rsocket.routing.broker.spring.cluster;
 
+import java.time.Duration;
+
+import io.rsocket.exceptions.RejectedSetupException;
+import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.frames.BrokerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.annotation.ConnectMapping;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
 public class ClusterController {
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
+	private final BrokerProperties properties;
+	private final BrokerConnections brokerConnections;
 
-	public ClusterController() {
-		System.out.println();
+	private final FluxProcessor<BrokerInfo, BrokerInfo> connectEvents =
+			DirectProcessor.<BrokerInfo>create().serialize();
+
+	public ClusterController(BrokerProperties properties, BrokerConnections brokerConnections) {
+		this.properties = properties;
+		this.brokerConnections = brokerConnections;
+
+		// subscribe to connect events so that a return BrokerInfo call is delayed
+		// This allows broker to maintain a single connection, but allows other broker
+		// to call brokerInfo() to get this broker's id and add it to BrokerConnections.
+		// TODO: configurable delay
+		connectEvents.delayElements(Duration.ofSeconds(1))
+				.flatMap(brokerInfo -> {
+					RSocketRequester requester = brokerConnections.get(brokerInfo);
+					return sendBrokerInfo(requester, brokerInfo);
+				}).subscribe();
 	}
 
 	@ConnectMapping
-	public void onConnect(BrokerInfo brokerInfo, RSocketRequester rSocketRequester) {
-		brokerInfo(brokerInfo, rSocketRequester);
+	public Mono<Void> onConnect(BrokerInfo brokerInfo, RSocketRequester rSocketRequester) {
+		if (brokerInfo.getBrokerId().equals(properties.getBrokerId())) {
+			//TODO: weird case I wonder if I can avoid
+			return Mono.empty();
+		}
+		logger.info("received connection from {}", brokerInfo);
+
+		if (brokerConnections.contains(brokerInfo)) {
+			// reject duplicate connections
+			throw new RejectedSetupException("Duplicate connection from " + brokerInfo);
+		}
+
+		// store broker info
+		brokerConnections.put(brokerInfo, rSocketRequester);
+
+		// send a connectEvent
+		connectEvents.onNext(brokerInfo);
+		return Mono.empty();
 	}
 
-	@RequestMapping("cluster.broker-info")
-	public boolean brokerInfo(BrokerInfo brokerInfo, RSocketRequester rSocketRequester) {
-		logger.info("received connection from {}", brokerInfo);
-		// TODO: store broker info
-		// TODO: send BrokerInfo back
-		return false;
+	@MessageMapping("cluster.broker-info")
+	public Mono<BrokerInfo> brokerInfo(BrokerInfo brokerInfo, RSocketRequester rSocketRequester) {
+		logger.info("received brokerInfo from {}", brokerInfo);
+
+		// if brokerConnections has connections
+		if (brokerConnections.contains(brokerInfo)) {
+			logger.debug("connection for broker already exists {}", brokerInfo);
+			// we can now accept RouteJoin from this broker
+			// TODO: add flag to RoutingTable for this broker
+			return Mono.just(BrokerInfo.from(properties.getBrokerId()).build());
+		}
+
+		// else store broker info
+		brokerConnections.put(brokerInfo, rSocketRequester);
+
+		// send BrokerInfo back
+		return sendBrokerInfo(rSocketRequester, brokerInfo);
+	}
+
+	private Mono<BrokerInfo> sendBrokerInfo(RSocketRequester rSocketRequester, BrokerInfo brokerInfo) {
+		BrokerInfo localBrokerInfo = BrokerInfo.from(properties.getBrokerId()).build();
+		return rSocketRequester.route("cluster.broker-info")
+				.data(localBrokerInfo)
+				.retrieveMono(BrokerInfo.class)
+				.map(bi -> localBrokerInfo);
 	}
 
 	@MessageMapping("hello")

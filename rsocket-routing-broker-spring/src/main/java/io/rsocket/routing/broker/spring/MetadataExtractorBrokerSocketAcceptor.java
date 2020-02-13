@@ -22,6 +22,7 @@ import io.rsocket.metadata.WellKnownMimeType;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
+import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.locator.RSocketLocator;
 import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.frames.Address;
@@ -36,9 +37,10 @@ public class MetadataExtractorBrokerSocketAcceptor extends BrokerSocketAcceptor 
 	public static final MimeType COMPOSITE_MIME_TYPE = MimeType
 			.valueOf(WellKnownMimeType.MESSAGE_RSOCKET_COMPOSITE_METADATA.toString());
 
-	public MetadataExtractorBrokerSocketAcceptor(RoutingTable routingTable, RSocketIndex rSocketIndex,
+	public MetadataExtractorBrokerSocketAcceptor(BrokerProperties properties,
+			RoutingTable routingTable, RSocketIndex rSocketIndex,
 			RSocketLocator rSocketLocator, MetadataExtractor metadataExtractor) {
-		super(routingTable, rSocketIndex, rSocketLocator, connectionSetupPayload -> {
+		super(properties, routingTable, rSocketIndex, rSocketLocator, connectionSetupPayload -> {
 			Map<String, Object> setupMetadata = metadataExtractor.extract(connectionSetupPayload,
 					MimeType.valueOf(connectionSetupPayload.metadataMimeType()));
 
