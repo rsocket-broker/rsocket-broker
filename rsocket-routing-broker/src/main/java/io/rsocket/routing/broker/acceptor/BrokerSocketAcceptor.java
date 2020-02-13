@@ -24,10 +24,12 @@ import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
+import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.locator.RSocketLocator;
 import io.rsocket.routing.broker.rsocket.RoutingRSocket;
 import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.common.WellKnownKey;
+import io.rsocket.routing.frames.RouteJoin;
 import io.rsocket.routing.frames.RouteSetup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,13 +44,20 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 	protected final RSocketLocator rSocketLocator;
 	protected final Function<ConnectionSetupPayload, RouteSetup> routeSetupExtractor;
 	protected final Function<Payload, Tags> tagsExtractor;
+	protected final BrokerProperties properties;
 
-	public BrokerSocketAcceptor(RoutingTable routingTable, RSocketIndex rSocketIndex, RSocketLocator rSocketLocator, Function<ConnectionSetupPayload, RouteSetup> routeSetupExtractor, Function<Payload, Tags> tagsExtractor) {
+	public BrokerSocketAcceptor(BrokerProperties properties, RoutingTable routingTable,
+			RSocketIndex rSocketIndex, RSocketLocator rSocketLocator,
+			Function<ConnectionSetupPayload, RouteSetup> routeSetupExtractor,
+			Function<Payload, Tags> tagsExtractor) {
 		this.routingTable = routingTable;
 		this.rSocketIndex = rSocketIndex;
 		this.rSocketLocator = rSocketLocator;
 		this.routeSetupExtractor = routeSetupExtractor;
 		this.tagsExtractor = tagsExtractor;
+		this.properties = properties;
+
+		logger.info("Starting Broker {}", properties.getBrokerId());
 	}
 
 	@Override
@@ -63,16 +72,16 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 					// TODO: deal with existing connection for routeSetup.routeId
 					RoutingRSocket receivingSocket = new RoutingRSocket(rSocketLocator, tagsExtractor);
 
-					// enrich RouteSetup before indexing or RoutingTable
-					RouteSetup enriched = enrich(routeSetup);
+					// create RouteJoin before indexing or RoutingTable
+					RouteJoin routeJoin = toRouteJoin(routeSetup);
 
 					// update index before RoutingTable
 					// adds sendingSocket to rSocketIndex for later lookup
-					rSocketIndex.put(enriched.getRouteId(), sendingSocket, enriched
+					rSocketIndex.put(routeJoin.getRouteId(), sendingSocket, routeJoin
 							.getTags());
 
 					// update routing table with incoming route.
-					routingTable.add(enriched);
+					routingTable.add(routeJoin);
 
 					return Mono.fromSupplier(() -> receivingSocket);
 				});
@@ -88,10 +97,13 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 	}
 
 	/**
-	 * enrich tags with routeId and serviceName
+	 * Creates RouteJoin with current brokerId and enriches tags with routeId and serviceName.
  	 */
-	private RouteSetup enrich(RouteSetup routeSetup) {
-		return RouteSetup.from(routeSetup.getRouteId(), routeSetup.getServiceName())
+	private RouteJoin toRouteJoin(RouteSetup routeSetup) {
+		return RouteJoin.builder()
+				.brokerId(properties.getBrokerId())
+				.routeId(routeSetup.getRouteId())
+				.serviceName(routeSetup.getServiceName())
 				.with(routeSetup.getTags())
 				.with(WellKnownKey.ROUTE_ID, routeSetup.getRouteId().toString())
 				.with(WellKnownKey.SERVICE_NAME, routeSetup.getServiceName())
