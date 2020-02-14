@@ -30,10 +30,13 @@ import io.rsocket.routing.broker.config.ClusterBrokerProperties;
 import io.rsocket.routing.broker.config.TcpBrokerProperties;
 import io.rsocket.routing.broker.config.WebsocketBrokerProperties;
 import io.rsocket.routing.broker.locator.RemoteRSocketLocator;
+import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.cluster.BrokerConnections;
 import io.rsocket.routing.broker.spring.cluster.ClusterController;
 import io.rsocket.routing.broker.spring.cluster.ClusterJoinListener;
 import io.rsocket.routing.broker.spring.cluster.MessageHandlerClusterSocketAcceptor;
+import io.rsocket.routing.broker.spring.cluster.ProxyConnections;
+import io.rsocket.routing.broker.spring.cluster.RouteJoinListener;
 import io.rsocket.routing.frames.RoutingFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +67,7 @@ import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHa
 
 @Configuration
 @EnableConfigurationProperties
+@ConditionalOnProperty(name = BrokerAutoConfiguration.BROKER_PREFIX + ".enabled", matchIfMissing = true)
 @AutoConfigureAfter({RSocketStrategiesAutoConfiguration.class, BrokerRSocketStrategiesAutoConfiguration.class})
 public class BrokerAutoConfiguration implements InitializingBean {
 
@@ -83,8 +87,11 @@ public class BrokerAutoConfiguration implements InitializingBean {
 
 		if (metadataExtractor instanceof DefaultMetadataExtractor) {
 			DefaultMetadataExtractor extractor = (DefaultMetadataExtractor) metadataExtractor;
-			extractor.metadataToExtract(MimeTypes.ROUTING_FRAME_MIME_TYPE, RoutingFrame.class,
-					MimeTypes.ROUTING_FRAME_METADATA_KEY);
+			// adds all RoutingFrame impls such as RouteJoin, RouteSetup, etc..
+			// to the spring encoding/decoding framework.
+			extractor
+					.metadataToExtract(MimeTypes.ROUTING_FRAME_MIME_TYPE, RoutingFrame.class,
+							MimeTypes.ROUTING_FRAME_METADATA_KEY);
 		}
 	}
 
@@ -117,17 +124,37 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
-	public RemoteRSocketLocator remoteRSocketLocator(RoutingTable routingTable, RSocketIndex index) {
-		return new RemoteRSocketLocator(routingTable, index);
+	public RemoteRSocketLocator remoteRSocketLocator(BrokerProperties properties,
+			RoutingTable routingTable, RSocketIndex index, ProxyConnections connections) {
+		return new RemoteRSocketLocator(properties, routingTable, index, brokerInfo -> connections
+				.get(brokerInfo));
+	}
+
+	@Bean
+	public AddressTagsExtractor addressTagsExtractor(RSocketStrategies strategies) {
+		return new AddressTagsExtractor(strategies.metadataExtractor());
+	}
+
+	@Bean
+	public RoutingRSocketFactory routingRSocketFactory(RemoteRSocketLocator locator,
+			AddressTagsExtractor tagsExtractor) {
+		return new RoutingRSocketFactory(locator, tagsExtractor);
+	}
+
+	@Bean
+	public RouteJoinListener routeJoinListener(BrokerProperties properties,
+			RoutingTable routingTable, BrokerConnections brokerConnections) {
+		return new RouteJoinListener(properties, routingTable, brokerConnections);
 	}
 
 	@Bean
 	public MetadataExtractorBrokerSocketAcceptor metadataExtractorBrokerSocketAcceptor(
 			RSocketStrategies rSocketStrategies, RoutingTable routingTable,
-			RSocketIndex rSocketIndex, RemoteRSocketLocator locator,
-			BrokerProperties properties) {
+			RSocketIndex rSocketIndex, RoutingRSocketFactory routingRSocketFactory,
+			BrokerProperties properties, ProxyConnections proxyConnections) {
 		return new MetadataExtractorBrokerSocketAcceptor(properties, routingTable, rSocketIndex,
-				locator, rSocketStrategies.metadataExtractor());
+				routingRSocketFactory, rSocketStrategies
+				.metadataExtractor(), proxyConnections);
 	}
 
 	private static RSocketServerFactory getRSocketServerFactory(ReactorResourceFactory resourceFactory,
@@ -165,17 +192,23 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		}
 
 		@Bean
+		public ProxyConnections proxyConnections() {
+			return new ProxyConnections();
+		}
+
+		@Bean
 		public ClusterController clusterController(BrokerProperties properties,
-				BrokerConnections brokerConnections) {
-			return new ClusterController(properties, brokerConnections);
+				BrokerConnections brokerConnections, RoutingTable routingTable) {
+			return new ClusterController(properties, brokerConnections, routingTable);
 		}
 
 		@Bean
 		public ClusterJoinListener clusterJoinListener(BrokerProperties properties,
-				BrokerConnections brokerConnections, RSocketMessageHandler messageHandler,
-				RSocketStrategies strategies) {
-			return new ClusterJoinListener(properties, brokerConnections, messageHandler,
-					strategies);
+				BrokerConnections brokerConnections, ProxyConnections proxyConnections,
+				RSocketMessageHandler messageHandler, RSocketStrategies strategies,
+				RoutingRSocketFactory routingRSocketFactory) {
+			return new ClusterJoinListener(properties, brokerConnections, proxyConnections,
+					messageHandler, strategies, routingRSocketFactory);
 		}
 
 		@Bean
@@ -248,7 +281,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	private static class BrokerRSocketServerBootstrap extends RSocketServerBootstrap {
 
 		// purposefully using NettyRSocketServer
-		private static final Logger logger = LoggerFactory.getLogger(NettyRSocketServer.class);
+		private static final Logger logger = LoggerFactory
+				.getLogger(NettyRSocketServer.class);
 		private final AbstractBrokerProperties properties;
 
 		public BrokerRSocketServerBootstrap(AbstractBrokerProperties properties,

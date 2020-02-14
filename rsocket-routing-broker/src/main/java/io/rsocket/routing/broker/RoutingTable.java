@@ -76,8 +76,12 @@ public class RoutingTable implements Disposable {
 		}
 	}
 
+	public Flux<RouteJoin> joinEvents(Predicate<RouteJoin> predicate) {
+		return joinEvents.filter(predicate);
+	}
+
 	public Flux<RouteJoin> joinEvents(Tags tags) {
-		return joinEvents.filter(containsTags(tags));
+		return joinEvents(containsTags(tags));
 	}
 
 	public Flux<RouteJoin> leaveEvents(Tags tags) {

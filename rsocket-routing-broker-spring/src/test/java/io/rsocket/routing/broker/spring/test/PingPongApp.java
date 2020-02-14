@@ -45,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
+import reactor.core.publisher.MonoProcessor;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -59,13 +60,14 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.messaging.rsocket.RSocketStrategies;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.rsocket.routing.broker.spring.MetadataExtractorBrokerSocketAcceptor.COMPOSITE_MIME_TYPE;
+import static io.rsocket.routing.broker.spring.MimeTypes.COMPOSITE_MIME_TYPE;
 
 @SpringBootConfiguration
 @EnableAutoConfiguration
 public class PingPongApp {
 
 	@Bean
+	@ConditionalOnProperty(name = "ping.one.enabled", matchIfMissing = true)
 	public Ping ping1() {
 		return new Ping(1L);
 	}
@@ -77,14 +79,15 @@ public class PingPongApp {
 	}
 
 	@Bean
+	@ConditionalOnProperty(name = "pong.enabled", matchIfMissing = true)
 	public Pong pong() {
 		return new Pong();
 	}
 
-	@Bean
+	/*@Bean
 	public ClusterClient clusterClient() {
 		return new ClusterClient();
-	}
+	}*/
 
 	public static void main(String[] args) {
 		Hooks.onOperatorDebug();
@@ -135,6 +138,22 @@ public class PingPongApp {
 		return composite;
 	}
 
+
+	private static void startDaemonThread(String name, MonoProcessor<Void> onClose) {
+		Thread awaitThread =
+				new Thread(name + "-thread") {
+
+					@Override
+					public void run() {
+						onClose.block();
+					}
+				};
+		awaitThread.setContextClassLoader(PingPongApp.class.getClassLoader());
+		awaitThread.setDaemon(false);
+		awaitThread.start();
+	}
+
+
 	public static class Ping
 			implements Ordered, ApplicationListener<ApplicationReadyEvent> {
 
@@ -163,8 +182,7 @@ public class PingPongApp {
 			logger.info("Starting Ping {}", id);
 			ConfigurableEnvironment env = event.getApplicationContext().getEnvironment();
 			Integer take = env.getProperty("ping.take", Integer.class, null);
-			Integer port = env.getProperty("spring.rsocket.server.port",
-					Integer.class, 8001);
+			Integer port = env.getProperty("ping.broker.port", Integer.class, 8001);
 
 			logger.debug("ping.take: {}", take);
 
@@ -188,6 +206,10 @@ public class PingPongApp {
 			if (subscribe) {
 				pongFlux.subscribe();
 			}
+
+			MonoProcessor<Void> onClose = MonoProcessor.create();
+
+			startDaemonThread("ping"+id, onClose);
 		}
 
 		Publisher<? extends String> doPing(Integer take, RSocket socket) {
@@ -250,8 +272,7 @@ public class PingPongApp {
 				e.printStackTrace();
 			}
 			logger.info("Starting Pong");
-			Integer port = env.getProperty("spring.rsocket.server.port",
-					Integer.class, 8001);
+			Integer port = env.getProperty("pong.broker.port", Integer.class, 8001);
 			//MicrometerRSocketInterceptor interceptor = new MicrometerRSocketInterceptor(
 			//		meterRegistry, Tag.of("component", "pong"));
 
@@ -262,6 +283,10 @@ public class PingPongApp {
 					/*.addRequesterPlugin(interceptor)*/.acceptor(this::accept)
 					.transport(TcpClientTransport.create(port)) // proxy
 					.start().block();
+
+			MonoProcessor<Void> onClose = MonoProcessor.create();
+
+			startDaemonThread("pong", onClose);
 		}
 
 		@SuppressWarnings("Duplicates")

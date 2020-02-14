@@ -31,8 +31,8 @@ import org.springframework.context.annotation.Bean;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(properties = {"io.rsocket.routing.broker.broker-id=00000000-0000-0000-0000-000000000007",
-		"io.rsocket.routing.broker.brokers[0].host=myhost",
-		"io.rsocket.routing.broker.brokers[0].port=99"})
+		"io.rsocket.routing.broker.brokers[0].cluster.host=myhost",
+		"io.rsocket.routing.broker.brokers[0].cluster.port=99"})
 public class BrokerPropertiesTests {
 
 	@Autowired

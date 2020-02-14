@@ -57,7 +57,7 @@ public class BrokerProperties {
 				.toString();
 	}
 
-	public static class Broker {
+	public static abstract class AbstractAcceptor {
 		private String host;
 
 		private int port;
@@ -80,9 +80,41 @@ public class BrokerProperties {
 
 		@Override
 		public String toString() {
-			return new StringJoiner(", ", Broker.class.getSimpleName() + "[", "]")
+			return new StringJoiner(", ", getClass().getSimpleName() + "[", "]")
 					.add("host='" + host + "'")
 					.add("port=" + port)
+					.toString();
+		}
+	}
+
+	// for use in broker to broker communication
+	public static class ClusterAcceptor extends AbstractAcceptor {
+
+	}
+
+	// for use in proxying
+	// TODO: name?
+	public static class ProxyAcceptor extends AbstractAcceptor {
+
+	}
+
+	public static class Broker {
+		private final ClusterAcceptor cluster = new ClusterAcceptor();
+		private final ProxyAcceptor proxy = new ProxyAcceptor();
+
+		public ClusterAcceptor getCluster() {
+			return this.cluster;
+		}
+
+		public ProxyAcceptor getProxy() {
+			return this.proxy;
+		}
+
+		@Override
+		public String toString() {
+			return new StringJoiner(", ", Broker.class.getSimpleName() + "[", "]")
+					.add("cluster=" + cluster)
+					.add("proxy=" + proxy)
 					.toString();
 		}
 	}

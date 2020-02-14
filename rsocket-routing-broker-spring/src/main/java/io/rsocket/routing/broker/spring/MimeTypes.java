@@ -16,8 +16,13 @@
 
 package io.rsocket.routing.broker.spring;
 
+import io.rsocket.metadata.WellKnownMimeType;
+
 import org.springframework.util.MimeType;
 
+/**
+ * Holds MimeType objects for RSocket mime types.
+ */
 public abstract class MimeTypes {
 
 	public static final String SUB_TYPE = "x.rsocket.routing.frame.v0";
@@ -27,6 +32,9 @@ public abstract class MimeTypes {
 	public static final MimeType ROUTING_FRAME_MIME_TYPE = new MimeType("message",
 			SUB_TYPE);
 	public static final String ROUTING_FRAME_METADATA_KEY = "routingframe";
+
+	public static final MimeType COMPOSITE_MIME_TYPE = MimeType
+			.valueOf(WellKnownMimeType.MESSAGE_RSOCKET_COMPOSITE_METADATA.toString());
 
 	private MimeTypes() {
 
