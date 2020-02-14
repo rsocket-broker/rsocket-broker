@@ -26,7 +26,9 @@ import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.frame.SetupFrameFlyweight;
 import io.rsocket.routing.broker.config.BrokerProperties;
+import io.rsocket.routing.broker.config.BrokerProperties.AbstractAcceptor;
 import io.rsocket.routing.broker.config.BrokerProperties.Broker;
+import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.MimeTypes;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.BrokerInfoFlyweight;
@@ -46,6 +48,10 @@ import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHa
 
 import static io.rsocket.metadata.WellKnownMimeType.MESSAGE_RSOCKET_COMPOSITE_METADATA;
 
+/**
+ * Once a broker node has started, this class reaches out to other configured brokers.
+ * It makes connections to both the cluster port and the proxy port.
+ */
 public class ClusterJoinListener implements ApplicationListener<ApplicationReadyEvent> {
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -54,52 +60,75 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 
 	private final BrokerConnections brokerConnections;
 
+	private final ProxyConnections proxyConnections;
+
 	private final RSocketMessageHandler messageHandler;
 
 	private final RSocketStrategies strategies;
+	private final RoutingRSocketFactory routingRSocketFactory;
 
 	private RSocket rSocket;
 
-	public ClusterJoinListener(BrokerProperties properties,
-			BrokerConnections brokerConnections, RSocketMessageHandler messageHandler, RSocketStrategies strategies) {
+	public ClusterJoinListener(BrokerProperties properties, BrokerConnections brokerConnections,
+			ProxyConnections proxyConnections, RSocketMessageHandler messageHandler,
+			RSocketStrategies strategies, RoutingRSocketFactory routingRSocketFactory) {
 		this.properties = properties;
 		this.brokerConnections = brokerConnections;
+		this.proxyConnections = proxyConnections;
 		this.messageHandler = messageHandler;
 		this.strategies = strategies;
+		this.routingRSocketFactory = routingRSocketFactory;
 		setupRSocket();
 	}
 
 	@Override
 	public void onApplicationEvent(ApplicationReadyEvent event) {
+		BrokerInfo localBrokerInfo = BrokerInfo
+				.from(properties.getBrokerId()).build();
+		// TODO: tags
 		for (Broker broker : properties.getBrokers()) {
-			BrokerInfo brokerInfo = BrokerInfo
-					.from(properties.getBrokerId()).build();
-			// TODO: tags
-
 			logger.info("connecting to {}", broker);
 
 			// TODO: micrometer
-			RSocketRequester.builder().rsocketStrategies(strategies)
-					.dataMimeType(MimeTypes.ROUTING_FRAME_MIME_TYPE)
-					.setupData(brokerInfo)
-					.rsocketFactory(rsocketFactory -> rsocketFactory
-							.acceptor(brokerSocketAcceptor()))
-					// TODO: other types
-					.connectTcp(broker.getHost(), broker.getPort())
-					.flatMap(requester -> {
-						return requester.route("cluster.broker-info")
-								.data(brokerInfo)
-								.retrieveMono(BrokerInfo.class)
-								.map(bi -> Tuples.of(bi, requester));
-					})
-					.doOnNext(tuple -> brokerConnections
-							.put(tuple.getT1(), tuple.getT2()))
+			// 1- connect to remote cluster port with the Broker RSocket
+			connect(broker.getCluster(), localBrokerInfo, null, rSocket)
+					// 2- call remote broker-info to get remote broker-id
+					.flatMap(requester -> requester.route("cluster.broker-info")
+							.data(localBrokerInfo)
+							.retrieveMono(BrokerInfo.class)
+							.map(remoteBrokerInfo -> {
+								// 3- save cluster requester
+								brokerConnections.put(remoteBrokerInfo, requester);
+								return remoteBrokerInfo;
+							}))
+					// 4- connect to remote broker port with a RoutingRSocket
+					.flatMap(remoteBrokerInfo -> connect(broker
+							.getProxy(), null, localBrokerInfo, routingRSocketFactory.create())
+							// 5- save broker requester
+							.map(requester2 -> {
+								proxyConnections
+										.put(remoteBrokerInfo, requester2.rsocket());
+								return Tuples.of(remoteBrokerInfo, requester2.rsocket());
+							}))
 					.subscribe();
 		}
 	}
 
-	SocketAcceptor brokerSocketAcceptor() {
-		return (setup, sendingSocket) -> Mono.just(rSocket);
+	private Mono<RSocketRequester> connect(AbstractAcceptor connection, Object data,
+			Object metadata, RSocket rSocket) {
+		RSocketRequester.Builder builder = RSocketRequester.builder()
+				.rsocketStrategies(strategies)
+				.dataMimeType(MimeTypes.ROUTING_FRAME_MIME_TYPE);
+		if (data != null) {
+			builder.setupData(data);
+		}
+		if (metadata != null) {
+			builder.setupMetadata(metadata, MimeTypes.ROUTING_FRAME_MIME_TYPE);
+		}
+		return builder.rsocketFactory(rsocketFactory -> rsocketFactory
+				.acceptor((setup, sendingSocket) -> Mono.just(rSocket)))
+				// TODO: other types?
+				.connectTcp(connection.getHost(), connection.getPort());
 	}
 
 	/**

@@ -16,46 +16,49 @@
 
 package io.rsocket.routing.broker.acceptor;
 
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import io.rsocket.ConnectionSetupPayload;
-import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.config.BrokerProperties;
-import io.rsocket.routing.broker.locator.RSocketLocator;
-import io.rsocket.routing.broker.rsocket.RoutingRSocket;
-import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.common.WellKnownKey;
+import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
 import io.rsocket.routing.frames.RouteSetup;
+import io.rsocket.routing.frames.RoutingFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
+/**
+ * SocketAcceptor for routable connections either from clients or other brokers.
+ */
 public class BrokerSocketAcceptor implements SocketAcceptor {
 	protected static final Logger logger = LoggerFactory
 			.getLogger(BrokerSocketAcceptor.class);
 
+	protected final BrokerProperties properties;
 	protected final RoutingTable routingTable;
 	protected final RSocketIndex rSocketIndex;
-	protected final RSocketLocator rSocketLocator;
-	protected final Function<ConnectionSetupPayload, RouteSetup> routeSetupExtractor;
-	protected final Function<Payload, Tags> tagsExtractor;
-	protected final BrokerProperties properties;
+	protected final Function<ConnectionSetupPayload, RoutingFrame> payloadExtractor;
+	protected final BiConsumer<BrokerInfo, RSocket> brokerInfoConsumer;
+	protected final RoutingRSocketFactory routingRSocketFactory;
 
 	public BrokerSocketAcceptor(BrokerProperties properties, RoutingTable routingTable,
-			RSocketIndex rSocketIndex, RSocketLocator rSocketLocator,
-			Function<ConnectionSetupPayload, RouteSetup> routeSetupExtractor,
-			Function<Payload, Tags> tagsExtractor) {
+			RSocketIndex rSocketIndex, RoutingRSocketFactory routingRSocketFactory,
+			Function<ConnectionSetupPayload, RoutingFrame> payloadExtractor,
+			BiConsumer<BrokerInfo, RSocket> brokerInfoConsumer) {
 		this.routingTable = routingTable;
 		this.rSocketIndex = rSocketIndex;
-		this.rSocketLocator = rSocketLocator;
-		this.routeSetupExtractor = routeSetupExtractor;
-		this.tagsExtractor = tagsExtractor;
+		this.routingRSocketFactory = routingRSocketFactory;
+		this.payloadExtractor = payloadExtractor;
 		this.properties = properties;
+		this.brokerInfoConsumer = brokerInfoConsumer;
 
 		logger.info("Starting Broker {}", properties.getBrokerId());
 	}
@@ -63,14 +66,22 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 	@Override
 	public Mono<RSocket> accept(ConnectionSetupPayload setup, RSocket sendingSocket) {
 		try {
-			RouteSetup routeSetup = routeSetupExtractor.apply(setup);
+			RoutingFrame routingFrame = payloadExtractor.apply(setup);
 
-			if (routeSetup != null) {
+			logger.debug("accept {}", routingFrame);
+
+			if (routingFrame instanceof BrokerInfo) {
+				// this is another broker connecting
+
+				brokerInfoConsumer.accept((BrokerInfo) routingFrame, sendingSocket);
+
+				return Mono.fromSupplier(routingRSocketFactory::create);
+			} else if (routingFrame instanceof RouteSetup) {
+				RouteSetup routeSetup = (RouteSetup) routingFrame;
 				// TODO: metrics
 				// TODO: error on disconnect?
 				return Mono.defer(() -> {
 					// TODO: deal with existing connection for routeSetup.routeId
-					RoutingRSocket receivingSocket = new RoutingRSocket(rSocketLocator, tagsExtractor);
 
 					// create RouteJoin before indexing or RoutingTable
 					RouteJoin routeJoin = toRouteJoin(routeSetup);
@@ -83,7 +94,7 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 					// update routing table with incoming route.
 					routingTable.add(routeJoin);
 
-					return Mono.fromSupplier(() -> receivingSocket);
+					return Mono.fromSupplier(routingRSocketFactory::create);
 				});
 			}
 

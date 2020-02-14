@@ -18,9 +18,12 @@ package io.rsocket.routing.broker.spring.cluster;
 
 import java.time.Duration;
 
+import io.rsocket.exceptions.ApplicationErrorException;
 import io.rsocket.exceptions.RejectedSetupException;
+import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.frames.BrokerInfo;
+import io.rsocket.routing.frames.RouteJoin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.DirectProcessor;
@@ -32,19 +35,24 @@ import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.annotation.ConnectMapping;
 import org.springframework.stereotype.Controller;
 
+/**
+ * Handles inter-broker communication.
+ */
 @Controller
 public class ClusterController {
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 	private final BrokerProperties properties;
 	private final BrokerConnections brokerConnections;
+	private final RoutingTable routingTable;
 
 	private final FluxProcessor<BrokerInfo, BrokerInfo> connectEvents =
 			DirectProcessor.<BrokerInfo>create().serialize();
 
-	public ClusterController(BrokerProperties properties, BrokerConnections brokerConnections) {
+	public ClusterController(BrokerProperties properties, BrokerConnections brokerConnections, RoutingTable routingTable) {
 		this.properties = properties;
 		this.brokerConnections = brokerConnections;
+		this.routingTable = routingTable;
 
 		// subscribe to connect events so that a return BrokerInfo call is delayed
 		// This allows broker to maintain a single connection, but allows other broker
@@ -67,7 +75,7 @@ public class ClusterController {
 
 		if (brokerConnections.contains(brokerInfo)) {
 			// reject duplicate connections
-			throw new RejectedSetupException("Duplicate connection from " + brokerInfo);
+			return Mono.error(new RejectedSetupException("Duplicate connection from " + brokerInfo));
 		}
 
 		// store broker info
@@ -103,6 +111,21 @@ public class ClusterController {
 				.data(localBrokerInfo)
 				.retrieveMono(BrokerInfo.class)
 				.map(bi -> localBrokerInfo);
+	}
+
+	@MessageMapping("cluster.route-join")
+	private Mono<RouteJoin> routeJoin(RouteJoin routeJoin) {
+		logger.info("received RouteJoin {}", routeJoin);
+
+		BrokerInfo brokerInfo = BrokerInfo.from(routeJoin.getBrokerId()).build();
+		if (!brokerConnections.contains(brokerInfo)) {
+			// attempting to add a route for a broker with no connection.
+			return Mono.error(new ApplicationErrorException("No connection for broker " + brokerInfo));
+		}
+
+		routingTable.add(routeJoin);
+
+		return Mono.just(routeJoin);
 	}
 
 	@MessageMapping("hello")

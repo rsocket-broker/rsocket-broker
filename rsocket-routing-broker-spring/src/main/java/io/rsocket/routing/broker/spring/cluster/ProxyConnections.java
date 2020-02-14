@@ -18,16 +18,14 @@ package io.rsocket.routing.broker.spring.cluster;
 
 import io.rsocket.RSocket;
 
-import org.springframework.messaging.rsocket.RSocketRequester;
-
 /**
  * Maintains map of BrokerInfo->RSocketRequester of existing broker connections to current broker.
- * Used only for broker to broker communication.
+ * Used only for proxying requests between brokers.
  */
-public class BrokerConnections extends AbstractConnections<RSocketRequester> {
+public class ProxyConnections extends AbstractConnections<RSocket> {
 
 	@Override
-	protected RSocket getRSocket(RSocketRequester requester) {
-		return requester.rsocket();
+	protected RSocket getRSocket(RSocket rSocket) {
+		return rSocket;
 	}
 }
