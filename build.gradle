@@ -2,12 +2,10 @@ plugins {
 	id 'io.spring.dependency-management' version '1.0.9.RELEASE'
 }
 
-group = 'io.rsocket'
-version = '0.0.1-SNAPSHOT'
-
 subprojects {
 	apply plugin: 'java'
 	apply plugin: 'io.spring.dependency-management'
+	apply plugin: 'maven-publish'
 
 	sourceCompatibility = '1.8'
 
@@ -35,6 +33,27 @@ subprojects {
 			dependency "org.agrona:agrona:${agronaVersion}"
 			dependency "org.assertj:assertj-core:${assertjVersion}"
 			dependency "org.roaringbitmap:RoaringBitmap:${roaringbitmapVersion}"
+		}
+	}
+
+	java {
+		withJavadocJar()
+		withSourcesJar()
+	}
+
+	publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				from components.java
+				versionMapping {
+					usage('java-api') {
+						fromResolutionOf('runtimeClasspath')
+					}
+					usage('java-runtime') {
+						fromResolutionResult()
+					}
+				}
+			}
 		}
 	}
 
