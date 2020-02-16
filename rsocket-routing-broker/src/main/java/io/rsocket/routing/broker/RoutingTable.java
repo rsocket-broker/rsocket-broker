@@ -59,7 +59,7 @@ public class RoutingTable implements Disposable {
 	}
 
 	public void add(RouteJoin routeJoin) {
-		logger.info("adding RouteJoin {}", routeJoin);
+		logger.debug("adding RouteJoin {}", routeJoin);
 		synchronized (routes) {
 			routes.put(routeJoin.getRouteId(), routeJoin, routeJoin.getTags());
 		}
@@ -67,7 +67,7 @@ public class RoutingTable implements Disposable {
 	}
 
 	public void remove(Id routeId) {
-		logger.info("removing routeId {}", routeId);
+		logger.debug("removing routeId {}", routeId);
 		synchronized (routes) {
 			RouteJoin routeJoin = routes.remove(routeId);
 			if (routeJoin != null) {
