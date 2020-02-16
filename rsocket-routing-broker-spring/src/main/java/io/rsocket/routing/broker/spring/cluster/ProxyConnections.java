@@ -19,7 +19,7 @@ package io.rsocket.routing.broker.spring.cluster;
 import io.rsocket.RSocket;
 
 /**
- * Maintains map of BrokerInfo->RSocketRequester of existing broker connections to current broker.
+ * Maintains map of BrokerInfo to RSocketRequester of existing broker connections to current broker.
  * Used only for proxying requests between brokers.
  */
 public class ProxyConnections extends AbstractConnections<RSocket> {
