@@ -30,7 +30,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 
 /**
- * Maintains map of BrokerInfo->T of existing broker connections to current broker.
+ * Maintains map of BrokerInfo to T of existing broker connections to current broker.
  * A T object should be able to resolve an RSocket.
  */
 public abstract class AbstractConnections<T> {
