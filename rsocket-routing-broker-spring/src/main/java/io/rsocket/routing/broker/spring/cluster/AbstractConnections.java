@@ -74,7 +74,7 @@ public abstract class AbstractConnections<T> {
 	protected void registerCleanup(BrokerInfo brokerInfo, T connection) {
 		getRSocket(connection).onClose().doFinally(signal -> {
 			// cleanup everything related to this connection
-			logger.info("removing connection " + brokerInfo);
+			logger.debug("removing connection {}", brokerInfo);
 			connections.remove(brokerInfo);
 			leaveEvents.onNext(brokerInfo);
 
