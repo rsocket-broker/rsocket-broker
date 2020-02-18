@@ -45,12 +45,12 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 	public Mono<Void> fireAndForget(Payload payload) {
 		try {
 			Tags tags = tagsExtractor.apply(payload);
-			RSocket rSocket = rSocketLocator.apply(tags);
+			Mono<RSocket> located = rSocketLocator.apply(tags);
 
 			//TODO: metadata enrichment?
 
-			return rSocket.fireAndForget(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO")));
+			return located.map(rSocket -> rSocket.fireAndForget(payload)
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO")))).then();
 		} catch (Throwable e) {
 			payload.release();
 			return Mono.error(new RuntimeException("TODO: fill out values")); //TODO:
@@ -61,10 +61,10 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 	public Mono<Payload> requestResponse(Payload payload) {
 		try {
 			Tags tags = tagsExtractor.apply(payload);
-			RSocket rSocket = rSocketLocator.apply(tags);
+			Mono<RSocket> located = rSocketLocator.apply(tags);
 
-			return rSocket.requestResponse(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO")));
+			return located.flatMap(rSocket -> rSocket.requestResponse(payload)
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO"))));
 		} catch (Throwable e) {
 			payload.release();
 			return Mono.error(new RuntimeException("TODO: fill out values")); //TODO:
@@ -75,10 +75,10 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 	public Mono<Void> metadataPush(Payload payload) {
 		try {
 			Tags tags = tagsExtractor.apply(payload);
-			RSocket rSocket = rSocketLocator.apply(tags);
+			Mono<RSocket> located = rSocketLocator.apply(tags);
 
-			return rSocket.metadataPush(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO")));
+			return located.map(rSocket -> rSocket.metadataPush(payload)
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO")))).then();
 		} catch (Throwable e) {
 			payload.release();
 			return Mono.error(new RuntimeException("TODO: fill out values")); //TODO:
@@ -89,10 +89,10 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 	public Flux<Payload> requestStream(Payload payload) {
 		try {
 			Tags tags = tagsExtractor.apply(payload);
-			RSocket rSocket = rSocketLocator.apply(tags);
+			Mono<RSocket> located = rSocketLocator.apply(tags);
 
-			return rSocket.requestStream(payload)
-					.onErrorResume(e -> Flux.error(new RuntimeException("TODO")));
+			return located.flatMapMany(rSocket -> rSocket.requestStream(payload)
+					.onErrorResume(e -> Flux.error(new RuntimeException("TODO"))));
 		} catch (Throwable e) {
 			payload.release();
 			return Flux.error(new RuntimeException("TODO: fill out values")); //TODO:
@@ -106,9 +106,9 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 				Payload payload = first.get();
 				try {
 					Tags tags = tagsExtractor.apply(payload);
-					RSocket rSocket = rSocketLocator.apply(tags);
-					return rSocket.requestChannel(flux.skip(1).startWith(payload))
-							.onErrorResume(e -> Flux.error(new RuntimeException("TODO")));
+					Mono<RSocket> located = rSocketLocator.apply(tags);
+					return located.flatMapMany(rSocket -> rSocket.requestChannel(flux.skip(1).startWith(payload))
+							.onErrorResume(e -> Flux.error(new RuntimeException("TODO"))));
 				}
 				catch (Throwable e) {
 					payload.release();
@@ -124,10 +124,10 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 	public Flux<Payload> requestChannel(Payload payload, Publisher<Payload> payloads) {
 		try {
 			Tags tags = tagsExtractor.apply(payload);
-			RSocket rSocket = rSocketLocator.apply(tags);
+			Mono<RSocket> located = rSocketLocator.apply(tags);
 
-			return rSocket.requestChannel(Flux.from(payloads).skip(1).startWith(payload))
-					.onErrorResume(e -> Flux.error(new RuntimeException("TODO", e)));
+			return located.flatMapMany(rSocket -> rSocket.requestChannel(Flux.from(payloads).skip(1).startWith(payload))
+					.onErrorResume(e -> Flux.error(new RuntimeException("TODO", e))));
 		} catch (Throwable e) {
 			payload.release();
 			return Flux.error(new RuntimeException("TODO: fill out values")); //TODO:

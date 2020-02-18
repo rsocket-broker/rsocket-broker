@@ -29,6 +29,9 @@ import io.rsocket.RSocket;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.config.BrokerProperties;
+import io.rsocket.routing.broker.loadbalance.LoadBalancer;
+import io.rsocket.routing.broker.loadbalance.LoadBalancer.CompletionContext;
+import io.rsocket.routing.broker.loadbalance.LoadBalancer.CompletionContext.Status;
 import io.rsocket.routing.broker.rsocket.ConnectingRSocket;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
@@ -36,6 +39,7 @@ import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 /**
  * RSocketLocator that merges RSockets from the local index and from remote brokers.
@@ -67,13 +71,16 @@ public class RemoteRSocketLocator implements RSocketLocator {
 	private final BrokerProperties properties;
 	private final RoutingTable routingTable;
 	private final RSocketIndex rSocketIndex;
+	private final LoadBalancer.Factory loadBalancerFactory;
 	private final Function<BrokerInfo, RSocket> brokerInfoRSocketFunction;
 
 	public RemoteRSocketLocator(BrokerProperties properties, RoutingTable routingTable,
-			RSocketIndex rSocketIndex, Function<BrokerInfo, RSocket> brokerInfoRSocketFunction) {
+			RSocketIndex rSocketIndex, LoadBalancer.Factory loadBalancerFactory,
+			Function<BrokerInfo, RSocket> brokerInfoRSocketFunction) {
 		this.properties = properties;
 		this.routingTable = routingTable;
 		this.rSocketIndex = rSocketIndex;
+		this.loadBalancerFactory = loadBalancerFactory;
 		this.brokerInfoRSocketFunction = brokerInfoRSocketFunction;
 	}
 
@@ -104,33 +111,42 @@ public class RemoteRSocketLocator implements RSocketLocator {
 	}
 
 	@Override
-	public RSocket apply(Tags tags) {
+	public Mono<RSocket> apply(Tags tags) {
 		// TODO: broadcast
 
 		List<RSocket> members = members(tags);
 		if (members.isEmpty()) {
-			return new ConnectingRSocket(routingTable.joinEvents(tags)
-					.next()
-					.map(routeSetup -> {
-						List<RSocket> found = members(tags);
-						if (logger.isWarnEnabled() && (found == null || found
-								.isEmpty())) {
-							logger.warn("Unable to locate RSockets for tags {}", tags);
-						}
-						return loadbalance(found);
-					}));
+			return Mono.just(connectingRSocket(tags));
 		}
 
-		return loadbalance(members);
+		return loadbalance(members, tags);
 	}
 
-	private RSocket loadbalance(List<RSocket> rSockets) {
-		if (rSockets == null || rSockets.isEmpty()) {
-			// TODO: return empty?
-			return new AbstractRSocket() {
-			};
-		}
+	private ConnectingRSocket connectingRSocket(Tags tags) {
+		return new ConnectingRSocket(routingTable.joinEvents(tags)
+				.next()
+				.flatMap(routeSetup -> {
+					List<RSocket> found = members(tags);
+					if (logger.isWarnEnabled() && (found == null || found
+							.isEmpty())) {
+						logger.warn("Unable to locate RSockets for tags {}", tags);
+					}
+					return loadbalance(found, tags);
+				}));
+	}
+
+	private Mono<RSocket> loadbalance(List<RSocket> rSockets, Tags tags) {
 		// TODO: loadbalance
-		return rSockets.get(0);
+		return loadBalancerFactory.getInstance(tags).choose(rSockets)
+				.map(response -> {
+					if (response.hasRSocket()) {
+						RSocket rSocket = response.getRSocket();
+						response.onComplete(new CompletionContext(Status.SUCCESSS));
+						return rSocket;
+					}
+					response.onComplete(new CompletionContext(Status.DISCARD));
+					// TODO: return empty?
+					return new AbstractRSocket() { };
+				});
 	}
 }

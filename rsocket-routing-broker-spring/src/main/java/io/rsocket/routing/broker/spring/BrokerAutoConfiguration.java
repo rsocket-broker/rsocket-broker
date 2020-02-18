@@ -29,6 +29,8 @@ import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.config.ClusterBrokerProperties;
 import io.rsocket.routing.broker.config.TcpBrokerProperties;
 import io.rsocket.routing.broker.config.WebsocketBrokerProperties;
+import io.rsocket.routing.broker.loadbalance.LoadBalancer;
+import io.rsocket.routing.broker.loadbalance.RoundRobinLoadBalancer;
 import io.rsocket.routing.broker.locator.RemoteRSocketLocator;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.cluster.BrokerConnections;
@@ -124,10 +126,17 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
+	@ConditionalOnMissingBean
+	public LoadBalancer.Factory loadBalancerFactory() {
+		return new RoundRobinLoadBalancer.Factory();
+	}
+
+	@Bean
 	public RemoteRSocketLocator remoteRSocketLocator(BrokerProperties properties,
-			RoutingTable routingTable, RSocketIndex index, ProxyConnections connections) {
-		return new RemoteRSocketLocator(properties, routingTable, index, brokerInfo -> connections
-				.get(brokerInfo));
+			RoutingTable routingTable, RSocketIndex index,
+			LoadBalancer.Factory loadBalancerFactory, ProxyConnections connections) {
+		return new RemoteRSocketLocator(properties, routingTable, index,
+				loadBalancerFactory, connections::get);
 	}
 
 	@Bean

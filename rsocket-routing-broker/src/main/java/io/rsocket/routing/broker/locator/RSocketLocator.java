@@ -20,7 +20,8 @@ import java.util.function.Function;
 
 import io.rsocket.RSocket;
 import io.rsocket.routing.common.Tags;
+import reactor.core.publisher.Mono;
 
 // TODO: name loadbalanced rsocket locator?
-public interface RSocketLocator extends Function<Tags, RSocket> {
+public interface RSocketLocator extends Function<Tags, Mono<RSocket>> {
 }
