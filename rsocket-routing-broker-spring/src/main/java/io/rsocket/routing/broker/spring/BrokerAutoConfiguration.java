@@ -30,7 +30,8 @@ import io.rsocket.routing.broker.config.ClusterBrokerProperties;
 import io.rsocket.routing.broker.config.TcpBrokerProperties;
 import io.rsocket.routing.broker.config.WebsocketBrokerProperties;
 import io.rsocket.routing.broker.loadbalance.LoadBalancer;
-import io.rsocket.routing.broker.loadbalance.RoundRobinLoadBalancer;
+import io.rsocket.routing.broker.loadbalance.WeightedLoadBalancer;
+import io.rsocket.routing.broker.loadbalance.WeightedRSocketFactory;
 import io.rsocket.routing.broker.locator.RemoteRSocketLocator;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.cluster.BrokerConnections;
@@ -110,8 +111,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
-	public RSocketIndex rSocketIndex() {
-		return new RSocketIndex();
+	public RSocketIndex rSocketIndex(WeightedRSocketFactory factory) {
+		return new RSocketIndex(factory);
 	}
 
 	@Bean
@@ -126,9 +127,16 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
+	public WeightedRSocketFactory weightedRSocketFactory() {
+		return new WeightedRSocketFactory();
+	}
+
+	@Bean
 	@ConditionalOnMissingBean
 	public LoadBalancer.Factory loadBalancerFactory() {
-		return new RoundRobinLoadBalancer.Factory();
+		// TODO: pick LoadBalancer algorithm via tags
+		//return new RoundRobinLoadBalancer.Factory();
+		return new WeightedLoadBalancer.Factory();
 	}
 
 	@Bean
@@ -146,8 +154,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 
 	@Bean
 	public RoutingRSocketFactory routingRSocketFactory(RemoteRSocketLocator locator,
-			AddressTagsExtractor tagsExtractor) {
-		return new RoutingRSocketFactory(locator, tagsExtractor);
+			AddressTagsExtractor tagsExtractor, WeightedRSocketFactory factory) {
+		return new RoutingRSocketFactory(locator, tagsExtractor, factory);
 	}
 
 	@Bean

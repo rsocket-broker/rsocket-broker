@@ -19,6 +19,7 @@ package io.rsocket.routing.broker.rsocket;
 import java.util.function.Function;
 
 import io.rsocket.Payload;
+import io.rsocket.RSocket;
 import io.rsocket.routing.broker.locator.RSocketLocator;
 import io.rsocket.routing.common.Tags;
 
@@ -29,13 +30,16 @@ public class RoutingRSocketFactory {
 
 	private final RSocketLocator rSocketLocator;
 	private final Function<Payload, Tags> tagsExtractor;
+	private final Function<RSocket, RSocket> rSocketTransformer;
 
-	public RoutingRSocketFactory(RSocketLocator rSocketLocator, Function<Payload, Tags> tagsExtractor) {
+	public RoutingRSocketFactory(RSocketLocator rSocketLocator, Function<Payload, Tags> tagsExtractor,
+			Function<RSocket, RSocket> rSocketTransformer) {
 		this.rSocketLocator = rSocketLocator;
 		this.tagsExtractor = tagsExtractor;
+		this.rSocketTransformer = rSocketTransformer;
 	}
 
-	public RoutingRSocket create() {
-		return new RoutingRSocket(rSocketLocator, tagsExtractor);
+	public RSocket create() {
+		return rSocketTransformer.apply(new RoutingRSocket(rSocketLocator, tagsExtractor));
 	}
 }
