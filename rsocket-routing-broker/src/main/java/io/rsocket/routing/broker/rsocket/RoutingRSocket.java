@@ -50,10 +50,10 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 			//TODO: metadata enrichment?
 
 			return located.map(rSocket -> rSocket.fireAndForget(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO")))).then();
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO", e)))).then();
 		} catch (Throwable e) {
 			payload.release();
-			return Mono.error(new RuntimeException("TODO: fill out values")); //TODO:
+			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
 		}
 	}
 
@@ -64,10 +64,10 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 			Mono<RSocket> located = rSocketLocator.apply(tags);
 
 			return located.flatMap(rSocket -> rSocket.requestResponse(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO"))));
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO", e))));
 		} catch (Throwable e) {
 			payload.release();
-			return Mono.error(new RuntimeException("TODO: fill out values")); //TODO:
+			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
 		}
 	}
 
@@ -78,10 +78,10 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 			Mono<RSocket> located = rSocketLocator.apply(tags);
 
 			return located.map(rSocket -> rSocket.metadataPush(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO")))).then();
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO", e)))).then();
 		} catch (Throwable e) {
 			payload.release();
-			return Mono.error(new RuntimeException("TODO: fill out values")); //TODO:
+			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
 		}
 	}
 
@@ -92,10 +92,10 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 			Mono<RSocket> located = rSocketLocator.apply(tags);
 
 			return located.flatMapMany(rSocket -> rSocket.requestStream(payload)
-					.onErrorResume(e -> Flux.error(new RuntimeException("TODO"))));
+					.onErrorResume(e -> Flux.error(new RuntimeException("TODO", e))));
 		} catch (Throwable e) {
 			payload.release();
-			return Flux.error(new RuntimeException("TODO: fill out values")); //TODO:
+			return Flux.error(new RuntimeException("TODO: fill out values", e)); //TODO:
 		}
 	}
 
@@ -108,12 +108,12 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 					Tags tags = tagsExtractor.apply(payload);
 					Mono<RSocket> located = rSocketLocator.apply(tags);
 					return located.flatMapMany(rSocket -> rSocket.requestChannel(flux.skip(1).startWith(payload))
-							.onErrorResume(e -> Flux.error(new RuntimeException("TODO"))));
+							.onErrorResume(e -> Flux.error(new RuntimeException("TODO", e))));
 				}
 				catch (Throwable e) {
 					payload.release();
 					return Flux
-							.error(new RuntimeException("TODO: fill out values")); //TODO:
+							.error(new RuntimeException("TODO: fill out values", e)); //TODO:
 				}
 			}
 			return flux;
@@ -130,7 +130,7 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 					.onErrorResume(e -> Flux.error(new RuntimeException("TODO", e))));
 		} catch (Throwable e) {
 			payload.release();
-			return Flux.error(new RuntimeException("TODO: fill out values")); //TODO:
+			return Flux.error(new RuntimeException("TODO: fill out values", e)); //TODO:
 		}
 	}
 }
