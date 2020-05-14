@@ -24,7 +24,7 @@ import io.rsocket.ConnectionSetupPayload;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
-import io.rsocket.frame.SetupFrameFlyweight;
+import io.rsocket.frame.SetupFrameCodec;
 import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.config.BrokerProperties.AbstractAcceptor;
 import io.rsocket.routing.broker.config.BrokerProperties.Broker;
@@ -157,7 +157,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 						brokerInfo.getTimestamp(), brokerInfo.getTags());
 		Payload setupPayload = DefaultPayload.create(encodedBrokerInfo,
 				Unpooled.EMPTY_BUFFER);
-		ByteBuf setup = SetupFrameFlyweight.encode(byteBufAllocator, false, 1, 1,
+		ByteBuf setup = SetupFrameCodec.encode(byteBufAllocator, false, 1, 1,
 				MESSAGE_RSOCKET_COMPOSITE_METADATA.getString(),
 				MimeTypes.ROUTING_FRAME_MIME_TYPE.toString(), setupPayload);
 		return ConnectionSetupPayload.create(setup);
