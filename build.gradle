@@ -20,15 +20,10 @@ subprojects {
 			mavenBom "io.projectreactor:reactor-bom:${reactorBomVersion}"
 			mavenBom "org.junit:junit-bom:${junitJupiterVersion}"
 			mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
+			mavenBom "io.rsocket:rsocket-bom:${rsocketVersion}"
 		}
 
 		dependencies {
-			dependency "io.rsocket:rsocket-core:${rsocketVersion}"
-			dependency "io.rsocket:rsocket-load-balancer:${rsocketVersion}"
-			dependency "io.rsocket:rsocket-micrometer:${rsocketVersion}"
-			dependency "io.rsocket:rsocket-test:${rsocketVersion}"
-			dependency "io.rsocket:rsocket-transport-local:${rsocketVersion}"
-			dependency "io.rsocket:rsocket-transport-netty:${rsocketVersion}"
 			dependency "io.rsocket.routing:rsocket-routing-common:${rsocketRoutingClientVersion}"
 			dependency "io.rsocket.routing:rsocket-routing-frames:${rsocketRoutingClientVersion}"
 			dependency "org.agrona:agrona:${agronaVersion}"
