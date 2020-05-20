@@ -29,4 +29,7 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
-      run: ./gradlew build
+      env:
+        BINTRAY_USER: ${{ secrets.bintrayUser }}
+        BINTRAY_KEY: ${{ secrets.bintrayKey }}
+      run: ./gradlew build artifactoryPublish -Dbuild.number=$GITHUB_RUN_ID

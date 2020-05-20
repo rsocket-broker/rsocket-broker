@@ -1,4 +1,6 @@
 plugins {
+	id 'com.jfrog.artifactory' version '4.11.0' apply false
+	id 'com.jfrog.bintray' version '1.8.4' apply false
 	id 'io.spring.dependency-management' version '1.0.9.RELEASE'
 }
 
@@ -12,6 +14,12 @@ subprojects {
 	repositories {
 		mavenCentral()
 		maven { url 'https://repo.spring.io/milestone' }
+		if (version.endsWith('SNAPSHOT')) {
+			maven { url 'https://repo.spring.io/libs-snapshot' }
+			maven {
+				url 'https://oss.jfrog.org/artifactory/oss-snapshot-local'
+			}
+		}
 		mavenLocal()
 	}
 
@@ -51,6 +59,27 @@ subprojects {
 				}
 			}
 		}
+	}
+
+	// from https://reflectoring.io/publish-snapshots-with-gradle/
+	artifactory {
+		contextUrl = 'https://oss.jfrog.org'
+		publish {
+			repository {
+				repoKey = 'oss-snapshot-local'
+				username = System.getenv('BINTRAY_USER')
+				password = System.getenv('BINTRAY_KEY')
+			}
+			defaults {
+				publications(publishing.publications.mavenJava)
+				publishArtifacts = true
+				publishPom = true
+			}
+		}
+		resolve {
+			repoKey = 'jcenter'
+		}
+		clientConfig.info.setBuildNumber(System.getProperty('build.number'))
 	}
 
 	test {
