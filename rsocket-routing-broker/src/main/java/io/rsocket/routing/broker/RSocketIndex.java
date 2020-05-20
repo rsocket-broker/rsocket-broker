@@ -49,6 +49,7 @@ public class RSocketIndex implements IndexedMap<Id, RSocket, Tags> {
 	}
 
 	public RSocket remove(Id key) {
+		// TODO: call RSocket.dispose();
 		return indexedMap.remove(key);
 	}
 
