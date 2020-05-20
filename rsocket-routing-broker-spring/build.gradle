@@ -1,9 +1,9 @@
 description = 'RSocket Routing Broker Spring'
 
 dependencies {
-	compile project(':rsocket-routing-broker')
-	compile 'io.rsocket.routing:rsocket-routing-common'
-	compile 'io.rsocket.routing:rsocket-routing-frames'
+	api project(':rsocket-routing-broker')
+	api 'io.rsocket.routing:rsocket-routing-common'
+	api 'io.rsocket.routing:rsocket-routing-frames'
 
 	annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
 

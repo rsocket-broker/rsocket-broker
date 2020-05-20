@@ -2,12 +2,12 @@ description = 'RSocket Routing Broker'
 
 dependencies {
 	implementation 'io.projectreactor.netty:reactor-netty'
-	compile "io.rsocket:rsocket-core"
-	compile "io.rsocket.routing:rsocket-routing-common"
-	compile "io.rsocket.routing:rsocket-routing-frames"
-	compile "org.agrona:agrona"
-	compile 'org.roaringbitmap:RoaringBitmap'
-	compile 'org.slf4j:slf4j-api'
+	api "io.rsocket:rsocket-core"
+	api "io.rsocket.routing:rsocket-routing-common"
+	api "io.rsocket.routing:rsocket-routing-frames"
+	api "org.agrona:agrona"
+	api 'org.roaringbitmap:RoaringBitmap'
+	api 'org.slf4j:slf4j-api'
 
 	testImplementation 'org.assertj:assertj-core'
 	testImplementation 'org.junit.jupiter:junit-jupiter'
