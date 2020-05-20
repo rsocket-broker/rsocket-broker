@@ -57,8 +57,8 @@ import org.springframework.boot.rsocket.context.RSocketServerBootstrap;
 import org.springframework.boot.rsocket.netty.NettyRSocketServer;
 import org.springframework.boot.rsocket.netty.NettyRSocketServerFactory;
 import org.springframework.boot.rsocket.server.RSocketServer;
+import org.springframework.boot.rsocket.server.RSocketServerCustomizer;
 import org.springframework.boot.rsocket.server.RSocketServerFactory;
-import org.springframework.boot.rsocket.server.ServerRSocketFactoryProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -175,14 +175,14 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	private static RSocketServerFactory getRSocketServerFactory(ReactorResourceFactory resourceFactory,
-			ObjectProvider<ServerRSocketFactoryProcessor> processors, AbstractBrokerProperties properties) {
+			ObjectProvider<RSocketServerCustomizer> processors, AbstractBrokerProperties properties) {
 		NettyRSocketServerFactory factory = new NettyRSocketServerFactory();
 		factory.setResourceFactory(resourceFactory);
 		factory.setTransport(getTransport(properties));
 		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
 		map.from(properties.getAddress()).to(factory::setAddress);
 		map.from(properties.getPort()).to(factory::setPort);
-		factory.setSocketFactoryProcessors(processors.orderedStream().collect(Collectors
+		factory.setRSocketServerCustomizers(processors.orderedStream().collect(Collectors
 				.toList()));
 		return factory;
 	}
@@ -243,7 +243,7 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		public RSocketServerBootstrap clusterRSocketServerBootstrap(
 				ClusterBrokerProperties properties,
 				ReactorResourceFactory resourceFactory,
-				ObjectProvider<ServerRSocketFactoryProcessor> processors,
+				ObjectProvider<RSocketServerCustomizer> processors,
 				ClusterSocketAcceptor clusterSocketAcceptor) {
 			RSocketServerFactory serverFactory = getRSocketServerFactory(resourceFactory, processors, properties);
 			return new BrokerRSocketServerBootstrap(properties, serverFactory, clusterSocketAcceptor);
@@ -266,7 +266,7 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		public RSocketServerBootstrap tcpRSocketServerBootstrap(
 				TcpBrokerProperties properties,
 				ReactorResourceFactory resourceFactory,
-				ObjectProvider<ServerRSocketFactoryProcessor> processors,
+				ObjectProvider<RSocketServerCustomizer> processors,
 				BrokerSocketAcceptor brokerSocketAcceptor) {
 			RSocketServerFactory serverFactory = getRSocketServerFactory(resourceFactory, processors, properties);
 			return new BrokerRSocketServerBootstrap(properties, serverFactory, brokerSocketAcceptor);
@@ -288,7 +288,7 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		public RSocketServerBootstrap websocketRSocketServerBootstrap(
 				WebsocketBrokerProperties properties,
 				ReactorResourceFactory resourceFactory,
-				ObjectProvider<ServerRSocketFactoryProcessor> processors,
+				ObjectProvider<RSocketServerCustomizer> processors,
 				BrokerSocketAcceptor brokerSocketAcceptor) {
 			RSocketServerFactory serverFactory = getRSocketServerFactory(resourceFactory, processors, properties);
 			return new BrokerRSocketServerBootstrap(properties, serverFactory, brokerSocketAcceptor);

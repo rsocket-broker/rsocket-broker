@@ -18,10 +18,8 @@ package io.rsocket.routing.broker.rsocket;
 
 import java.util.function.Function;
 
-import io.rsocket.AbstractRSocket;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
-import io.rsocket.ResponderRSocket;
 import io.rsocket.routing.broker.locator.RSocketLocator;
 import io.rsocket.routing.common.Tags;
 import org.reactivestreams.Publisher;
@@ -31,7 +29,7 @@ import reactor.core.publisher.Mono;
 /**
  * Routes received requests to the correct routable destination.
  */
-public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket {
+public class RoutingRSocket implements RSocket {
 
 	private final RSocketLocator rSocketLocator;
 	private final Function<Payload, Tags> tagsExtractor;
@@ -120,17 +118,4 @@ public class RoutingRSocket extends AbstractRSocket implements ResponderRSocket 
 		});
 	}
 
-	@Override
-	public Flux<Payload> requestChannel(Payload payload, Publisher<Payload> payloads) {
-		try {
-			Tags tags = tagsExtractor.apply(payload);
-			Mono<RSocket> located = rSocketLocator.apply(tags);
-
-			return located.flatMapMany(rSocket -> rSocket.requestChannel(Flux.from(payloads).skip(1).startWith(payload))
-					.onErrorResume(e -> Flux.error(new RuntimeException("TODO", e))));
-		} catch (Throwable e) {
-			payload.release();
-			return Flux.error(new RuntimeException("TODO: fill out values", e)); //TODO:
-		}
-	}
 }

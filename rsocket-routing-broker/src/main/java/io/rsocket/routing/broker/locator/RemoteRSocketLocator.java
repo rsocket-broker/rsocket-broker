@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.function.Function;
 
 import io.netty.util.concurrent.FastThreadLocal;
-import io.rsocket.AbstractRSocket;
 import io.rsocket.RSocket;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
@@ -146,7 +145,7 @@ public class RemoteRSocketLocator implements RSocketLocator {
 					}
 					response.onComplete(new CompletionContext(Status.DISCARD));
 					// TODO: return empty?
-					return new AbstractRSocket() { };
+					return new RSocket() { };
 				});
 	}
 }

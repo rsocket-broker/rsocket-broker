@@ -19,11 +19,11 @@ package io.rsocket.routing.broker.spring.cluster;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.rsocket.AbstractRSocket;
 import io.rsocket.ConnectionSetupPayload;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
+import io.rsocket.core.DefaultConnectionSetupPayload;
 import io.rsocket.frame.SetupFrameCodec;
 import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.config.BrokerProperties.AbstractAcceptor;
@@ -125,7 +125,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 		if (metadata != null) {
 			builder.setupMetadata(metadata, MimeTypes.ROUTING_FRAME_MIME_TYPE);
 		}
-		return builder.rsocketFactory(rsocketFactory -> rsocketFactory
+		return builder.rsocketConnector(rSocketConnector -> rSocketConnector
 				.acceptor((setup, sendingSocket) -> Mono.just(rSocket)))
 				// TODO: other types?
 				.connectTcp(connection.getHost(), connection.getPort());
@@ -140,7 +140,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 	private void setupRSocket() {
 		ConnectionSetupPayload connectionSetupPayload = getConnectionSetupPayload();
 		SocketAcceptor responder = this.messageHandler.responder();
-		responder.accept(connectionSetupPayload, new AbstractRSocket() {
+		responder.accept(connectionSetupPayload, new RSocket() {
 		}).subscribe(rSocket -> {
 			this.rSocket = rSocket;
 		});
@@ -160,7 +160,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 		ByteBuf setup = SetupFrameCodec.encode(byteBufAllocator, false, 1, 1,
 				MESSAGE_RSOCKET_COMPOSITE_METADATA.getString(),
 				MimeTypes.ROUTING_FRAME_MIME_TYPE.toString(), setupPayload);
-		return ConnectionSetupPayload.create(setup);
+		return new DefaultConnectionSetupPayload(setup);
 	}
 
 }

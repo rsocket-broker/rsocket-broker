@@ -18,14 +18,13 @@ package io.rsocket.routing.broker.rsocket;
 
 import java.util.Collection;
 
-import io.rsocket.AbstractRSocket;
 import io.rsocket.RSocket;
 
 /**
  * RSocket implementation that will broadcast payloads to a
  * collection of RSockets.
  */
-public abstract class BroadcastRSocket extends AbstractRSocket {
+public abstract class BroadcastRSocket implements RSocket {
 
 	public abstract Collection<? extends RSocket> getRSockets();
 

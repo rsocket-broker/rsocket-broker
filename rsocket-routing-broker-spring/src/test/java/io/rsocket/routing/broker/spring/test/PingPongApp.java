@@ -26,10 +26,10 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
-import io.rsocket.RSocketFactory;
+import io.rsocket.core.RSocketConnector;
 import io.rsocket.frame.decoder.PayloadDecoder;
-import io.rsocket.metadata.CompositeMetadataFlyweight;
-import io.rsocket.metadata.TaggingMetadataFlyweight;
+import io.rsocket.metadata.CompositeMetadataCodec;
+import io.rsocket.metadata.TaggingMetadataCodec;
 import io.rsocket.metadata.WellKnownMimeType;
 import io.rsocket.routing.broker.spring.MimeTypes;
 import io.rsocket.routing.common.Id;
@@ -45,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -116,7 +117,8 @@ public class PingPongApp {
 		ByteBuf routeSetup = RouteSetupFlyweight
 				.encode(ByteBufAllocator.DEFAULT, routeId, serviceName, tags);
 
-		CompositeByteBuf composite = encodeComposite(routeSetup, MimeTypes.ROUTING_FRAME_MIME_TYPE.toString());
+		CompositeByteBuf composite = encodeComposite(routeSetup, MimeTypes.ROUTING_FRAME_MIME_TYPE
+				.toString());
 		return composite;
 	}
 
@@ -126,13 +128,14 @@ public class PingPongApp {
 		ByteBuf address = AddressFlyweight
 				.encode(ByteBufAllocator.DEFAULT, originRouteId, Tags.empty(), tags);
 
-		CompositeByteBuf composite = encodeComposite(address, MimeTypes.ROUTING_FRAME_MIME_TYPE.toString());
+		CompositeByteBuf composite = encodeComposite(address, MimeTypes.ROUTING_FRAME_MIME_TYPE
+				.toString());
 		return composite;
 	}
 
 	private static CompositeByteBuf encodeComposite(ByteBuf byteBuf, String mimeType) {
 		CompositeByteBuf composite = ByteBufAllocator.DEFAULT.compositeBuffer();
-		CompositeMetadataFlyweight
+		CompositeMetadataCodec
 				.encodeAndAddMetadata(composite, ByteBufAllocator.DEFAULT,
 						mimeType, byteBuf);
 		return composite;
@@ -158,7 +161,7 @@ public class PingPongApp {
 			implements Ordered, ApplicationListener<ApplicationReadyEvent> {
 
 		private Logger logger = LoggerFactory.getLogger(getClass());
-		
+
 		@Autowired
 		private RSocketStrategies strategies;
 
@@ -189,11 +192,11 @@ public class PingPongApp {
 			ByteBuf metadata = encodeRouteSetup(strategies, id, "ping");
 			Payload setupPayload = DefaultPayload.create(EMPTY_BUFFER, metadata);
 
-			pongFlux = RSocketFactory.connect().frameDecoder(PayloadDecoder.ZERO_COPY)
+			pongFlux = RSocketConnector.create().payloadDecoder(PayloadDecoder.ZERO_COPY)
 					.metadataMimeType(COMPOSITE_MIME_TYPE.toString())
 					.setupPayload(setupPayload)//.addRequesterPlugin(interceptor)
-					.transport(TcpClientTransport.create(port)) // proxy
-					.start().log("startPing" + id)
+					.connect(TcpClientTransport.create(port)) // proxy
+					.log("startPing" + id)
 					.flatMapMany(socket -> doPing(take, socket)).cast(String.class)
 					.doOnSubscribe(o -> {
 						if (logger.isDebugEnabled()) {
@@ -209,7 +212,7 @@ public class PingPongApp {
 
 			MonoProcessor<Void> onClose = MonoProcessor.create();
 
-			startDaemonThread("ping"+id, onClose);
+			startDaemonThread("ping" + id, onClose);
 		}
 
 		Publisher<? extends String> doPing(Integer take, RSocket socket) {
@@ -277,12 +280,13 @@ public class PingPongApp {
 			//		meterRegistry, Tag.of("component", "pong"));
 
 			ByteBuf metadata = encodeRouteSetup(strategies, routeId, "pong");
-			RSocketFactory.connect().metadataMimeType(COMPOSITE_MIME_TYPE.toString())
-					.setupPayload(
-							DefaultPayload.create(EMPTY_BUFFER, metadata))
-					/*.addRequesterPlugin(interceptor)*/.acceptor(this::accept)
-					.transport(TcpClientTransport.create(port)) // proxy
-					.start().block();
+			RSocketConnector.create().metadataMimeType(COMPOSITE_MIME_TYPE.toString())
+					.setupPayload(DefaultPayload.create(EMPTY_BUFFER, metadata))
+					/*.addRequesterPlugin(interceptor)*/
+					.acceptor((setup, sendingSocket) -> Mono
+							.just(accept(sendingSocket)))
+					.connect(TcpClientTransport.create(port)) // proxy
+					.block();
 
 			MonoProcessor<Void> onClose = MonoProcessor.create();
 
@@ -346,20 +350,21 @@ public class PingPongApp {
 			//ByteBuf metadata = encodeRouteSetup(strategies, id, "ping");
 			Payload setupPayload = DefaultPayload.create(EMPTY_BUFFER, EMPTY_BUFFER);
 
-			Flux<String> flux = RSocketFactory.connect()
-					.frameDecoder(PayloadDecoder.ZERO_COPY)
+			Flux<String> flux = RSocketConnector.create()
+					.payloadDecoder(PayloadDecoder.ZERO_COPY)
 					.metadataMimeType(COMPOSITE_MIME_TYPE.toString())
 					.setupPayload(setupPayload)
-					.transport(TcpClientTransport.create(port)) // proxy
-					.start().log("startClusterClient" + id)
-					.flatMapMany(socket -> doHello(socket)).cast(String.class)
+					.connect(TcpClientTransport.create(port)) // proxy
+					.log("startClusterClient" + id)
+					.flatMapMany(this::doHello).cast(String.class)
 					.doOnSubscribe(o -> {
 						if (logger.isDebugEnabled()) {
 							logger.debug("ClusterClient doOnSubscribe");
 						}
 					});
 
-			boolean subscribe = env.getProperty("ClusterClient.subscribe", Boolean.class, true);
+			boolean subscribe = env
+					.getProperty("ClusterClient.subscribe", Boolean.class, true);
 
 			if (subscribe) {
 				flux.subscribe();
@@ -369,7 +374,7 @@ public class PingPongApp {
 		Publisher<? extends String> doHello(RSocket socket) {
 			ByteBuf data = ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT,
 					"World " + id);
-			ByteBuf routingMetadata = TaggingMetadataFlyweight
+			ByteBuf routingMetadata = TaggingMetadataCodec
 					.createRoutingMetadata(ByteBufAllocator.DEFAULT,
 							Collections.singletonList("hello")).getContent();
 			CompositeByteBuf composite = encodeComposite(routingMetadata, WellKnownMimeType.MESSAGE_RSOCKET_ROUTING
