@@ -8,6 +8,8 @@ subprojects {
 	apply plugin: 'java'
 	apply plugin: 'io.spring.dependency-management'
 	apply plugin: 'maven-publish'
+	apply plugin: 'com.jfrog.artifactory'
+	apply plugin: 'com.jfrog.bintray'
 
 	sourceCompatibility = '1.8'
 
