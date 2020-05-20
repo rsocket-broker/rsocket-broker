@@ -101,20 +101,19 @@ public class WeightedRSocket extends RSocketProxy {
 			return source
 					.requestResponse(payload)
 					.doOnCancel(() -> decr(start))
-					.doOnSuccessOrError(
-							(p, t) -> {
-								long now = decr(start);
-								if (t == null || t instanceof TimeoutException) {
-									observe(now - start);
-								}
+					.doOnSuccess(p -> {
+						long now = decr(start);
+						observe(now - start);
+						updateErrorPercentage(1.0);
+					})
+					.doOnError(t -> {
+						long now = decr(start);
+						if (t instanceof TimeoutException) {
+							observe(now - start);
+						}
 
-								if (t != null) {
-									updateErrorPercentage(0.0);
-								}
-								else {
-									updateErrorPercentage(1.0);
-								}
-							});
+						updateErrorPercentage(0.0);
+					});
 		}
 		catch (Throwable t) {
 			decr(start);
@@ -147,20 +146,19 @@ public class WeightedRSocket extends RSocketProxy {
 			return source
 					.fireAndForget(payload)
 					.doOnCancel(() -> decr(start))
-					.doOnSuccessOrError(
-							(p, t) -> {
-								long now = decr(start);
-								if (t == null || t instanceof TimeoutException) {
-									observe(now - start);
-								}
+					.doOnSuccess(p -> {
+						long now = decr(start);
+						observe(now - start);
+						updateErrorPercentage(1.0);
+					})
+					.doOnError(t -> {
+						long now = decr(start);
+						if (t instanceof TimeoutException) {
+							observe(now - start);
+						}
 
-								if (t != null) {
-									updateErrorPercentage(0.0);
-								}
-								else {
-									updateErrorPercentage(1.0);
-								}
-							});
+						updateErrorPercentage(0.0);
+					});
 		}
 		catch (Throwable t) {
 			decr(start);
@@ -176,20 +174,19 @@ public class WeightedRSocket extends RSocketProxy {
 			return source
 					.metadataPush(payload)
 					.doOnCancel(() -> decr(start))
-					.doOnSuccessOrError(
-							(p, t) -> {
-								long now = decr(start);
-								if (t == null || t instanceof TimeoutException) {
-									observe(now - start);
-								}
+					.doOnSuccess(p -> {
+						long now = decr(start);
+						observe(now - start);
+						updateErrorPercentage(1.0);
+					})
+					.doOnError(t -> {
+						long now = decr(start);
+						if (t instanceof TimeoutException) {
+							observe(now - start);
+						}
 
-								if (t != null) {
-									updateErrorPercentage(0.0);
-								}
-								else {
-									updateErrorPercentage(1.0);
-								}
-							});
+						updateErrorPercentage(0.0);
+					});
 		}
 		catch (Throwable t) {
 			decr(start);
