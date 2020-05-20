@@ -25,6 +25,7 @@ import io.rsocket.SocketAcceptor;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.config.BrokerProperties;
+import io.rsocket.routing.broker.rsocket.ErrorOnDisconnectRSocket;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.BrokerInfo;
@@ -33,6 +34,7 @@ import io.rsocket.routing.frames.RouteSetup;
 import io.rsocket.routing.frames.RoutingFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -65,17 +67,20 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 
 	@Override
 	public Mono<RSocket> accept(ConnectionSetupPayload setup, RSocket sendingSocket) {
+		Runnable doCleanup = () -> cleanup();
+
 		try {
 			RoutingFrame routingFrame = payloadExtractor.apply(setup);
 
 			logger.debug("accept {}", routingFrame);
 
+			RSocket wrapSendingSocket = wrapSendingSocket(sendingSocket, routingFrame);
 			if (routingFrame instanceof BrokerInfo) {
 				// this is another broker connecting
 
-				brokerInfoConsumer.accept((BrokerInfo) routingFrame, sendingSocket);
+				brokerInfoConsumer.accept((BrokerInfo) routingFrame, wrapSendingSocket);
 
-				return Mono.fromSupplier(routingRSocketFactory::create);
+				return finalize(sendingSocket, doCleanup);
 			} else if (routingFrame instanceof RouteSetup) {
 				RouteSetup routeSetup = (RouteSetup) routingFrame;
 				// TODO: metrics
@@ -88,13 +93,13 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 
 					// update index before RoutingTable
 					// adds sendingSocket to rSocketIndex for later lookup
-					rSocketIndex.put(routeJoin.getRouteId(), sendingSocket, routeJoin
-							.getTags());
+					rSocketIndex.put(routeJoin.getRouteId(), wrapSendingSocket,
+							routeJoin.getTags());
 
 					// update routing table with incoming route.
 					routingTable.add(routeJoin);
 
-					return Mono.fromSupplier(routingRSocketFactory::create);
+					return finalize(sendingSocket, doCleanup);
 				});
 			}
 
@@ -102,9 +107,29 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 		}
 		catch (Exception e) {
 			logger.error("Error accepting setup", e);
+			doCleanup.run();
 			return Mono.error(e);
 
 		}
+	}
+
+	private Mono<RSocket> finalize(RSocket sendingSocket, Runnable doCleanup) {
+		RSocket receivingSocket = routingRSocketFactory.create();
+		Flux.first(receivingSocket.onClose(), sendingSocket.onClose())
+				.doFinally(s -> doCleanup.run())
+				.subscribe();
+		return Mono.just(receivingSocket);
+	}
+
+	private void cleanup() {
+
+	}
+
+	private RSocket wrapSendingSocket(RSocket sendingSocket, RoutingFrame routingFrame) {
+		ErrorOnDisconnectRSocket rSocket = new ErrorOnDisconnectRSocket(sendingSocket);
+		 rSocket.onClose().doFinally(s -> logger.info(
+		 		"Closing socket for {}", routingFrame));
+		return rSocket;
 	}
 
 	/**
