@@ -48,7 +48,7 @@ public class RoutingRSocket implements RSocket {
 			//TODO: metadata enrichment?
 
 			return located.map(rSocket -> rSocket.fireAndForget(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO", e)))).then();
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO fnf", e)))).then();
 		} catch (Throwable e) {
 			payload.release();
 			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
@@ -62,7 +62,7 @@ public class RoutingRSocket implements RSocket {
 			Mono<RSocket> located = rSocketLocator.apply(tags);
 
 			return located.flatMap(rSocket -> rSocket.requestResponse(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO", e))));
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO rr", e))));
 		} catch (Throwable e) {
 			payload.release();
 			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
@@ -76,7 +76,7 @@ public class RoutingRSocket implements RSocket {
 			Mono<RSocket> located = rSocketLocator.apply(tags);
 
 			return located.map(rSocket -> rSocket.metadataPush(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO", e)))).then();
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO mp", e)))).then();
 		} catch (Throwable e) {
 			payload.release();
 			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
@@ -102,11 +102,12 @@ public class RoutingRSocket implements RSocket {
 		return Flux.from(payloads).switchOnFirst((first, flux) -> {
 			if (first.hasValue()) {
 				Payload payload = first.get();
+				payload.retain();
 				try {
 					Tags tags = tagsExtractor.apply(payload);
 					Mono<RSocket> located = rSocketLocator.apply(tags);
 					return located.flatMapMany(rSocket -> rSocket.requestChannel(flux.skip(1).startWith(payload))
-							.onErrorResume(e -> Flux.error(new RuntimeException("TODO", e))));
+							.onErrorResume(e -> Flux.error(new RuntimeException("TODO rc", e))));
 				}
 				catch (Throwable e) {
 					payload.release();
