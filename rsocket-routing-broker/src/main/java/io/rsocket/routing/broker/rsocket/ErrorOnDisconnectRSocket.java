@@ -28,7 +28,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 
-public class ErrorOnDisconnectRSocket implements RSocket {
+public class ErrorOnDisconnectRSocket implements DelegatingRSocket {
 
 	private static final CancellationException CANCELLATION_EXCEPTION =
 			new CancellationException("Connection has closed");
@@ -104,6 +104,11 @@ public class ErrorOnDisconnectRSocket implements RSocket {
 		catch (Throwable t) {
 			return Flux.error(t);
 		}
+	}
+
+	@Override
+	public RSocket getDelegate() {
+		return delegate;
 	}
 
 	private <T> Mono<T> wrapMono(Mono<T> source) {

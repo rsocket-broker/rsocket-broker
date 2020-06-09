@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.SplittableRandom;
 
 import io.rsocket.RSocket;
+import io.rsocket.routing.broker.rsocket.DelegatingRSocket;
 import io.rsocket.routing.broker.stats.FrugalQuantile;
 import io.rsocket.routing.broker.stats.Quantile;
 import io.rsocket.routing.common.Tags;
@@ -47,7 +48,7 @@ public class WeightedLoadBalancer implements LoadBalancer {
 		SplittableRandom rnd = localSplittableRandom.get();
 		int size = rSockets.size();
 		if (size == 1) {
-			rSocket = (WeightedRSocket) rSockets.get(0);
+			rSocket = weighted(rSockets.get(0));
 		}
 		else if (size > 1) {
 			WeightedRSocket rsc1 = null;
@@ -62,8 +63,8 @@ public class WeightedLoadBalancer implements LoadBalancer {
 				if (i2 >= i1) {
 					i2++;
 				}
-				rsc1 = (WeightedRSocket) rSockets.get(i1);
-				rsc2 = (WeightedRSocket) rSockets.get(i2);
+				rsc1 = weighted(rSockets.get(i1));
+				rsc2 = weighted(rSockets.get(i2));
 				if (rsc1.availability() > 0.0 && rsc2.availability() > 0.0) {
 					break;
 				}
@@ -86,6 +87,17 @@ public class WeightedLoadBalancer implements LoadBalancer {
 		}
 
 		return Mono.just(new Response(rSocket));
+	}
+
+	protected WeightedRSocket weighted(RSocket rSocket) {
+		if (rSocket instanceof WeightedRSocket) {
+			return (WeightedRSocket) rSocket;
+		}
+		if (rSocket instanceof DelegatingRSocket) {
+			DelegatingRSocket socket = (DelegatingRSocket) rSocket;
+			return weighted(socket.getDelegate());
+		}
+		throw new IllegalStateException("RSocket was not a WeightedRSocket or delegated to one");
 	}
 
 	private static double algorithmicWeight(
