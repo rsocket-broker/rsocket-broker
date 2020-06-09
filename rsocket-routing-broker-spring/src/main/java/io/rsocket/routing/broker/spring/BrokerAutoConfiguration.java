@@ -209,8 +209,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		}
 
 		@Bean
-		public ProxyConnections proxyConnections() {
-			return new ProxyConnections();
+		public ProxyConnections proxyConnections(WeightedRSocketFactory factory) {
+			return new ProxyConnections(factory);
 		}
 
 		@Bean

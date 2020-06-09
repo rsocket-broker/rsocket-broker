@@ -16,13 +16,27 @@
 
 package io.rsocket.routing.broker.spring.cluster;
 
+import java.util.function.Function;
+
 import io.rsocket.RSocket;
+import io.rsocket.routing.frames.BrokerInfo;
 
 /**
  * Maintains map of BrokerInfo to RSocketRequester of existing broker connections to current broker.
  * Used only for proxying requests between brokers.
  */
 public class ProxyConnections extends AbstractConnections<RSocket> {
+
+	private final Function<RSocket, RSocket> rSocketTransformer;
+
+	public ProxyConnections(Function<RSocket, RSocket> rSocketTransformer) {
+		this.rSocketTransformer = rSocketTransformer;
+	}
+
+	@Override
+	public RSocket put(BrokerInfo brokerInfo, RSocket connection) {
+		return super.put(brokerInfo, rSocketTransformer.apply(connection));
+	}
 
 	@Override
 	protected RSocket getRSocket(RSocket rSocket) {
