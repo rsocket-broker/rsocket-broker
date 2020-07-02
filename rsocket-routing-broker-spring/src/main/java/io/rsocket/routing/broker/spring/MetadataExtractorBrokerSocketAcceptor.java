@@ -49,7 +49,7 @@ public class MetadataExtractorBrokerSocketAcceptor extends BrokerSocketAcceptor 
 				return (RoutingFrame) setupMetadata.get(MimeTypes.ROUTING_FRAME_METADATA_KEY);
 			}
 			return null;
-		}, proxyConnections::put);
+		}, proxyConnections::put, proxyConnections::remove);
 	}
 
 }

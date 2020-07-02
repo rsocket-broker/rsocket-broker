@@ -17,6 +17,7 @@
 package io.rsocket.routing.broker.acceptor;
 
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.rsocket.ConnectionSetupPayload;
@@ -27,6 +28,7 @@ import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.rsocket.ErrorOnDisconnectRSocket;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
+import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
@@ -49,28 +51,31 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 	protected final RSocketIndex rSocketIndex;
 	protected final Function<ConnectionSetupPayload, RoutingFrame> payloadExtractor;
 	protected final BiConsumer<BrokerInfo, RSocket> brokerInfoConsumer;
+	protected final Consumer<BrokerInfo> brokerInfoCleaner;
 	protected final RoutingRSocketFactory routingRSocketFactory;
 
 	public BrokerSocketAcceptor(BrokerProperties properties, RoutingTable routingTable,
 			RSocketIndex rSocketIndex, RoutingRSocketFactory routingRSocketFactory,
 			Function<ConnectionSetupPayload, RoutingFrame> payloadExtractor,
-			BiConsumer<BrokerInfo, RSocket> brokerInfoConsumer) {
+			BiConsumer<BrokerInfo, RSocket> brokerInfoConsumer,
+			Consumer<BrokerInfo> brokerInfoCleaner) {
 		this.routingTable = routingTable;
 		this.rSocketIndex = rSocketIndex;
 		this.routingRSocketFactory = routingRSocketFactory;
 		this.payloadExtractor = payloadExtractor;
 		this.properties = properties;
 		this.brokerInfoConsumer = brokerInfoConsumer;
+		this.brokerInfoCleaner = brokerInfoCleaner;
 
 		logger.info("Starting Broker {}", properties.getBrokerId());
 	}
 
 	@Override
 	public Mono<RSocket> accept(ConnectionSetupPayload setup, RSocket sendingSocket) {
-		Runnable doCleanup = () -> cleanup();
 
 		try {
 			RoutingFrame routingFrame = payloadExtractor.apply(setup);
+			Runnable doCleanup = () -> cleanup(routingFrame);
 
 			logger.debug("accept {}", routingFrame);
 
@@ -107,9 +112,8 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 		}
 		catch (Exception e) {
 			logger.error("Error accepting setup", e);
-			doCleanup.run();
+//			doCleanup.run();
 			return Mono.error(e);
-
 		}
 	}
 
@@ -121,8 +125,17 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 		return Mono.just(receivingSocket);
 	}
 
-	private void cleanup() {
-
+	private void cleanup(RoutingFrame routingFrame) {
+		if (routingFrame instanceof BrokerInfo) {
+			BrokerInfo brokerInfo = (BrokerInfo) routingFrame;
+			brokerInfoCleaner.accept(brokerInfo);
+		}
+		else if (routingFrame instanceof RouteSetup) {
+			RouteSetup routeSetup = (RouteSetup) routingFrame;
+			Id routeId = routeSetup.getRouteId();
+			routingTable.remove(routeId);
+			rSocketIndex.remove(routeId);
+		}
 	}
 
 	private RSocket wrapSendingSocket(RSocket sendingSocket, RoutingFrame routingFrame) {
