@@ -47,8 +47,8 @@ public class RoutingRSocket implements RSocket {
 
 			//TODO: metadata enrichment?
 
-			return located.map(rSocket -> rSocket.fireAndForget(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO fnf", e)))).then();
+			return located.flatMap(rSocket -> rSocket.fireAndForget(payload)
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO fnf", e))));
 		} catch (Throwable e) {
 			payload.release();
 			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
@@ -75,8 +75,8 @@ public class RoutingRSocket implements RSocket {
 			Tags tags = tagsExtractor.apply(payload);
 			Mono<RSocket> located = rSocketLocator.apply(tags);
 
-			return located.map(rSocket -> rSocket.metadataPush(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO mp", e)))).then();
+			return located.flatMap(rSocket -> rSocket.metadataPush(payload)
+					.onErrorResume(e -> Mono.error(new RuntimeException("TODO mp", e))));
 		} catch (Throwable e) {
 			payload.release();
 			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
