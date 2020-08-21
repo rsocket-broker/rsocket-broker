@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
+import reactor.core.publisher.Mono;
 
 /**
  * Maintains map of BrokerInfo to T of existing broker connections to current broker.
@@ -69,17 +70,17 @@ public abstract class AbstractConnections<T> {
 		return removed;
 	}
 
-	protected abstract RSocket getRSocket(T connection);
+	protected abstract Mono<RSocket> getRSocket(T connection);
 
 	protected void registerCleanup(BrokerInfo brokerInfo, T connection) {
-		getRSocket(connection).onClose().doFinally(signal -> {
+		getRSocket(connection).map(rSocket -> rSocket.onClose().doFinally(signal -> {
 			// cleanup everything related to this connection
 			logger.debug("removing connection {}", brokerInfo);
 			connections.remove(brokerInfo);
 			leaveEvents.onNext(brokerInfo);
 
 			// TODO: remove routes for broker
-		});
+		})).subscribe();
 	}
 
 	public Flux<BrokerInfo> joinEvents() {

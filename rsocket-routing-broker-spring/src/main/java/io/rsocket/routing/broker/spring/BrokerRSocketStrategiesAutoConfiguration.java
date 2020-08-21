@@ -36,6 +36,7 @@ import io.rsocket.routing.frames.RouteSetupFlyweight;
 import io.rsocket.routing.frames.RoutingFrame;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.rsocket.RSocketStrategiesAutoConfiguration;
@@ -125,12 +126,28 @@ public class BrokerRSocketStrategiesAutoConfiguration {
 		@Override
 		public Flux<RoutingFrame> decode(Publisher<DataBuffer> inputStream, ResolvableType elementType, MimeType mimeType, Map<String, Object> hints) {
 			return Flux.from(inputStream)
-					.map(dataBuffer -> decode(dataBuffer, elementType, mimeType, hints));
+					// FIXME hack
+					.flatMap(dataBuffer -> {
+						RoutingFrame routingFrame = decode(dataBuffer, elementType, mimeType, hints);
+						if (routingFrame == null) {
+							return Mono.empty();
+						}
+						return Mono.just(routingFrame);
+					});
 		}
 
 		@Override
 		public RoutingFrame decode(DataBuffer buffer, ResolvableType targetType, MimeType mimeType, Map<String, Object> hints) throws DecodingException {
 			ByteBuf byteBuf = asByteBuf(buffer);
+			if (!byteBuf.isReadable()) {
+				// FIXME hack
+				return new RoutingFrame(null) {
+					@Override
+					public FrameType getFrameType() {
+						return super.getFrameType();
+					}
+				};
+			}
 			FrameType frameType = FrameHeaderFlyweight.frameType(byteBuf);
 			switch (frameType) {
 			case ADDRESS:

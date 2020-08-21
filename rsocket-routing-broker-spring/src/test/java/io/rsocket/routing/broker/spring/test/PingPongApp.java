@@ -180,7 +180,10 @@ public class PingPongApp {
 			return 0;
 		}
 
-		@Override
+		public void onApplicationEventx(ApplicationReadyEvent event) {
+			logger.info("Skipping Ping {}", id);
+		}
+
 		public void onApplicationEvent(ApplicationReadyEvent event) {
 			logger.info("Starting Ping {}", id);
 			ConfigurableEnvironment env = event.getApplicationContext().getEnvironment();
@@ -264,7 +267,10 @@ public class PingPongApp {
 			return 1;
 		}
 
-		@Override
+		public void onApplicationEventx(ApplicationReadyEvent event) {
+			logger.info("Skipping Pong");
+		}
+
 		public void onApplicationEvent(ApplicationReadyEvent event) {
 			ConfigurableEnvironment env = event.getApplicationContext().getEnvironment();
 			Integer pongDelay = env.getProperty("pong.delay", Integer.class, 5000);

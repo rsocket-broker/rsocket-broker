@@ -17,6 +17,7 @@
 package io.rsocket.routing.broker.spring.cluster;
 
 import io.rsocket.RSocket;
+import reactor.core.publisher.Mono;
 
 import org.springframework.messaging.rsocket.RSocketRequester;
 
@@ -27,7 +28,7 @@ import org.springframework.messaging.rsocket.RSocketRequester;
 public class BrokerConnections extends AbstractConnections<RSocketRequester> {
 
 	@Override
-	protected RSocket getRSocket(RSocketRequester requester) {
-		return requester.rsocket();
+	protected Mono<RSocket> getRSocket(RSocketRequester requester) {
+		return requester.rsocketClient().source();
 	}
 }

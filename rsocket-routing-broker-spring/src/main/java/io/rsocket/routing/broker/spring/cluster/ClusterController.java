@@ -24,6 +24,7 @@ import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
+import io.rsocket.routing.frames.RoutingFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.DirectProcessor;
@@ -66,7 +67,12 @@ public class ClusterController {
 	}
 
 	@ConnectMapping
-	public Mono<Void> onConnect(BrokerInfo brokerInfo, RSocketRequester rSocketRequester) {
+	public Mono<Void> onConnect(RoutingFrame routingFrame, RSocketRequester rSocketRequester) {
+		// FIXME: hack
+		if (!(routingFrame instanceof BrokerInfo)) {
+			return Mono.empty();
+		}
+		BrokerInfo brokerInfo = (BrokerInfo) routingFrame;
 		if (brokerInfo.getBrokerId().equals(properties.getBrokerId())) {
 			//TODO: weird case I wonder if I can avoid
 			return Mono.empty();

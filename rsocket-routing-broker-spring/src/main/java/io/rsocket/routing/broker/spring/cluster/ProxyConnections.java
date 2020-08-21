@@ -20,6 +20,7 @@ import java.util.function.Function;
 
 import io.rsocket.RSocket;
 import io.rsocket.routing.frames.BrokerInfo;
+import reactor.core.publisher.Mono;
 
 /**
  * Maintains map of BrokerInfo to RSocketRequester of existing broker connections to current broker.
@@ -39,7 +40,7 @@ public class ProxyConnections extends AbstractConnections<RSocket> {
 	}
 
 	@Override
-	protected RSocket getRSocket(RSocket rSocket) {
-		return rSocket;
+	protected Mono<RSocket> getRSocket(RSocket rSocket) {
+		return Mono.just(rSocket);
 	}
 }
