@@ -16,19 +16,36 @@
 
 package io.rsocket.routing.broker.config;
 
+import java.net.URI;
 import java.util.StringJoiner;
 
-public class ClusterBrokerProperties extends TransportProperties {
+public class WebsocketProperties extends HostPortProperties {
 
-	public ClusterBrokerProperties() {
-		getTcp().setPort(7001);
+	/**
+	 * Path under which RSocket handles requests (only works with websocket
+	 * transport).
+	 */
+	private String mappingPath;
+
+	public String getMappingPath() {
+		return this.mappingPath;
+	}
+
+	public void setMappingPath(String mappingPath) {
+		this.mappingPath = mappingPath;
+	}
+
+	public URI getUri() {
+		// TODO: validation, scheme
+		return URI.create("ws://" + getHost() + ":" + getPort() + mappingPath);
 	}
 
 	@Override
 	public String toString() {
-		return new StringJoiner(", ", ClusterBrokerProperties.class.getSimpleName() + "[", "]")
-				.add("tcp=" + getTcp())
-				.add("websocket=" + getWebsocket())
+		return new StringJoiner(", ", WebsocketProperties.class.getSimpleName() + "[", "]")
+				.add("address='" + getHost() + "'")
+				.add("port='" + getPort() + "'")
+				.add("mappingPath='" + mappingPath + "'")
 				.toString();
 	}
 }

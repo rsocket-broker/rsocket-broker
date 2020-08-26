@@ -23,7 +23,7 @@ import java.util.StringJoiner;
 import io.rsocket.routing.common.Id;
 
 // TODO: does the broker reuse client properties?
-public class BrokerProperties {
+public class BrokerProperties extends TransportProperties {
 
 	/**
 	 * Broker Id.
@@ -31,6 +31,10 @@ public class BrokerProperties {
 	private Id brokerId = Id.random();
 
 	private List<Broker> brokers = new ArrayList<>();
+
+	public BrokerProperties() {
+		getTcp().setPort(8001);
+	}
 
 	public Id getBrokerId() {
 		return this.brokerId;
@@ -54,59 +58,20 @@ public class BrokerProperties {
 				.getSimpleName() + "[", "]")
 				.add("brokerId=" + brokerId)
 				.add("brokers=" + brokers)
+				.add("tcp=" + getTcp())
+				.add("websocket=" + getWebsocket())
 				.toString();
 	}
 
-	public static abstract class AbstractAcceptor {
-		private String host;
-
-		private int port;
-
-		public String getHost() {
-			return this.host;
-		}
-
-		public void setHost(String host) {
-			this.host = host;
-		}
-
-		public int getPort() {
-			return this.port;
-		}
-
-		public void setPort(int port) {
-			this.port = port;
-		}
-
-		@Override
-		public String toString() {
-			return new StringJoiner(", ", getClass().getSimpleName() + "[", "]")
-					.add("host='" + host + "'")
-					.add("port=" + port)
-					.toString();
-		}
-	}
-
-	// for use in broker to broker communication
-	public static class ClusterAcceptor extends AbstractAcceptor {
-
-	}
-
-	// for use in proxying
-	// TODO: name?
-	public static class ProxyAcceptor extends AbstractAcceptor {
-
-	}
-
 	public static class Broker {
-		private final ClusterAcceptor cluster = new ClusterAcceptor();
-		private final ProxyAcceptor proxy = new ProxyAcceptor();
+		private final TransportProperties cluster = new TransportProperties();
+		private final TransportProperties proxy = new TransportProperties();
 
-		public ClusterAcceptor getCluster() {
+		public TransportProperties getCluster() {
 			return this.cluster;
 		}
 
-		public ProxyAcceptor getProxy() {
+		public TransportProperties getProxy() {
 			return this.proxy;
 		}
 

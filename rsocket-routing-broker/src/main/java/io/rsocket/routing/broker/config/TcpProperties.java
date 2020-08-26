@@ -16,11 +16,5 @@
 
 package io.rsocket.routing.broker.config;
 
-public class WebsocketBrokerProperties extends AbstractBrokerProperties {
-
-	public WebsocketBrokerProperties() {
-		super(Transport.WEBSOCKET);
-		setPort(8101);
-		setType("broker");
-	}
+public class TcpProperties extends HostPortProperties {
 }

@@ -26,8 +26,8 @@ import io.rsocket.SocketAcceptor;
 import io.rsocket.core.DefaultConnectionSetupPayload;
 import io.rsocket.frame.SetupFrameCodec;
 import io.rsocket.routing.broker.config.BrokerProperties;
-import io.rsocket.routing.broker.config.BrokerProperties.AbstractAcceptor;
 import io.rsocket.routing.broker.config.BrokerProperties.Broker;
+import io.rsocket.routing.broker.config.TransportProperties;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.MimeTypes;
 import io.rsocket.routing.frames.BrokerInfo;
@@ -36,7 +36,6 @@ import io.rsocket.util.DefaultPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-import reactor.util.function.Tuples;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
@@ -115,7 +114,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 		}
 	}
 
-	private RSocketRequester connect(AbstractAcceptor connection, Object data,
+	private RSocketRequester connect(TransportProperties transport, Object data,
 			Object metadata, RSocket rSocket) {
 		RSocketRequester.Builder builder = RSocketRequester.builder()
 				.rsocketStrategies(strategies)
@@ -126,10 +125,16 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 		if (metadata != null) {
 			builder.setupMetadata(metadata, MimeTypes.ROUTING_FRAME_MIME_TYPE);
 		}
-		return builder.rsocketConnector(rSocketConnector -> rSocketConnector
-				.acceptor((setup, sendingSocket) -> Mono.just(rSocket)))
-				// TODO: other types?
-				.tcp(connection.getHost(), connection.getPort());
+		builder.rsocketConnector(rSocketConnector -> rSocketConnector
+				.acceptor((setup, sendingSocket) -> Mono.just(rSocket)));
+
+		// order of precedence, custom, websocket, tcp
+		if (transport.getWebsocket() != null) {
+			return builder.websocket(transport.getWebsocket().getUri());
+		} else if (transport.getTcp() != null) {
+			return builder.tcp(transport.getTcp().getHost(), transport.getTcp().getPort());
+		}
+		throw new IllegalArgumentException("Unknown transport " + transport);
 	}
 
 	/**
@@ -155,7 +160,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 				.encode(byteBufAllocator, brokerInfo.getBrokerId(),
 						brokerInfo.getTimestamp(), brokerInfo.getTags());
 		Payload setupPayload = DefaultPayload.create(Unpooled.EMPTY_BUFFER,
-		//Payload setupPayload = DefaultPayload.create(encodedBrokerInfo,
+				//Payload setupPayload = DefaultPayload.create(encodedBrokerInfo,
 				Unpooled.EMPTY_BUFFER);
 		ByteBuf setup = SetupFrameCodec.encode(byteBufAllocator, false, 1, 1,
 				MESSAGE_RSOCKET_COMPOSITE_METADATA.getString(),
