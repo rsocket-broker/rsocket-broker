@@ -16,18 +16,15 @@
 
 package io.rsocket.routing.broker.spring;
 
-import java.util.stream.Collectors;
-
 import io.rsocket.SocketAcceptor;
 import io.rsocket.routing.broker.Broker;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
 import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
-import io.rsocket.routing.broker.config.TransportProperties;
-import io.rsocket.routing.broker.config.HostPortProperties;
 import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.config.ClusterBrokerProperties;
+import io.rsocket.routing.broker.config.TransportProperties;
 import io.rsocket.routing.broker.loadbalance.LoadBalancer;
 import io.rsocket.routing.broker.loadbalance.WeightedLoadBalancer;
 import io.rsocket.routing.broker.loadbalance.WeightedRSocketFactory;
@@ -51,11 +48,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.rsocket.RSocketStrategiesAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.boot.rsocket.context.RSocketServerBootstrap;
 import org.springframework.boot.rsocket.netty.NettyRSocketServer;
-import org.springframework.boot.rsocket.netty.NettyRSocketServerFactory;
-import org.springframework.boot.rsocket.server.RSocketServer;
 import org.springframework.boot.rsocket.server.RSocketServerCustomizer;
 import org.springframework.boot.rsocket.server.RSocketServerFactory;
 import org.springframework.context.ApplicationContext;
@@ -173,54 +167,17 @@ public class BrokerAutoConfiguration implements InitializingBean {
 				.metadataExtractor(), proxyConnections);
 	}
 
-	private static RSocketServerFactory getRSocketServerFactory(ReactorResourceFactory resourceFactory,
-			ObjectProvider<RSocketServerCustomizer> processors, TransportProperties properties) {
-		if (properties.hasCustomTransport()) {
-			//return null;
-			throw new UnsupportedOperationException("custom transports are not yet supported");
-		}
-		// else use spring boot's existing integration
-		NettyRSocketServerFactory factory = new NettyRSocketServerFactory();
-		factory.setResourceFactory(resourceFactory);
-		factory.setTransport(findTransport(properties));
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
-		HostPortProperties addressPort = findHostAndPort(properties);
-		map.from(addressPort.getHostAsAddress()).to(factory::setAddress);
-		map.from(addressPort.getPort()).to(factory::setPort);
-		factory.setRSocketServerCustomizers(processors.orderedStream().collect(Collectors
-				.toList()));
-		return factory;
-	}
-
-	/**
-	 * Find the selected transport in order of precedence: custom, websocket, tcp.
-	 * @return the selected transport.
-	 */
-	private static HostPortProperties findHostAndPort(TransportProperties properties) {
-		if (properties.hasCustomTransport()) {
-			return null;
-		} else if (properties.getWebsocket() != null) {
-			return properties.getWebsocket();
-		} else if (properties.getTcp() != null) {
-			return properties.getTcp();
-		}
-		throw new IllegalStateException("No valid Transport configured " + properties);
-	}
-
-	private static RSocketServer.Transport findTransport(TransportProperties properties) {
-		if (properties.getWebsocket() != null) {
-			return RSocketServer.Transport.WEBSOCKET;
-		} else if (properties.getTcp() != null) {
-			return RSocketServer.Transport.TCP;
-		}
-		throw new IllegalStateException("Unknown Transport " + properties);
-	}
-
 	private static String findTransportName(TransportProperties properties) {
 		if (properties.hasCustomTransport()) {
 			return properties.getCustom().getType();
 		}
-		return findTransport(properties).name();
+		else if (properties.getWebsocket() != null) {
+			return "websocket";
+		}
+		else if (properties.getTcp() != null) {
+			return "tcp";
+		}
+		throw new IllegalStateException("Unknown Transport " + properties);
 	}
 
 	@Configuration
@@ -266,45 +223,61 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		}
 
 		@Bean
-		public RSocketServerBootstrap clusterRSocketServerBootstrap(
+		public BrokerRSocketServerBootstrap clusterRSocketServerBootstrap(
 				ClusterBrokerProperties properties,
-				ReactorResourceFactory resourceFactory,
-				ObjectProvider<RSocketServerCustomizer> processors,
+				ObjectProvider<ServerTransportFactory> transportFactories,
 				ClusterSocketAcceptor clusterSocketAcceptor) {
-			RSocketServerFactory serverFactory = getRSocketServerFactory(resourceFactory, processors, properties);
+			RSocketServerFactory serverFactory = findRSocketServerFactory(properties, transportFactories);
 			return new BrokerRSocketServerBootstrap("cluster", findTransportName(properties), serverFactory, clusterSocketAcceptor);
 		}
 	}
 
 	@Bean
-	public RSocketServerBootstrap proxyRSocketServerBootstrap(
+	public DefaultServerTransportFactory defaultServerTransportFactory(ReactorResourceFactory resourceFactory,
+			ObjectProvider<RSocketServerCustomizer> processors) {
+		return new DefaultServerTransportFactory(resourceFactory, processors);
+	}
+
+	@Bean
+	public BrokerRSocketServerBootstrap proxyRSocketServerBootstrap(
 			BrokerProperties properties,
-			ReactorResourceFactory resourceFactory,
-			ObjectProvider<RSocketServerCustomizer> processors,
+			ObjectProvider<ServerTransportFactory> transportFactories,
 			BrokerSocketAcceptor brokerSocketAcceptor) {
-		RSocketServerFactory serverFactory = getRSocketServerFactory(resourceFactory, processors, properties);
+		RSocketServerFactory serverFactory = findRSocketServerFactory(properties, transportFactories);
 		return new BrokerRSocketServerBootstrap("broker", findTransportName(properties), serverFactory, brokerSocketAcceptor);
 	}
 
-	private static class BrokerRSocketServerBootstrap extends RSocketServerBootstrap {
+	private static RSocketServerFactory findRSocketServerFactory(TransportProperties properties, ObjectProvider<ServerTransportFactory> factories) {
+		return factories.orderedStream().filter(factory -> factory.supports(properties)).findFirst()
+				.map(factory -> factory.create(properties))
+				.orElseThrow(() -> new IllegalStateException("Unknown transport " + properties));
+	}
+
+	/* for testing */ static class BrokerRSocketServerBootstrap extends RSocketServerBootstrap {
 
 		// purposefully using NettyRSocketServer
 		private static final Logger logger = LoggerFactory
 				.getLogger(NettyRSocketServer.class);
 		private final String type;
 		private final String transport;
+		private final RSocketServerFactory serverFactory;
 
 		public BrokerRSocketServerBootstrap(String type, String transport,
 				RSocketServerFactory serverFactory, SocketAcceptor socketAcceptor) {
 			super(serverFactory, socketAcceptor);
 			this.type = type;
 			this.transport = transport;
+			this.serverFactory = serverFactory;
 		}
 
 		@Override
 		public void start() {
 			logger.info("Netty RSocket starting {} with {}", type, transport);
 			super.start();
+		}
+
+		/* for testing */ RSocketServerFactory getServerFactory() {
+			return this.serverFactory;
 		}
 	}
 

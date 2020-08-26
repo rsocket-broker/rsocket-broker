@@ -4,6 +4,7 @@ dependencies {
 	api project(':rsocket-routing-broker')
 	api 'io.rsocket.routing:rsocket-routing-common'
 	api 'io.rsocket.routing:rsocket-routing-frames'
+	implementation 'io.rsocket:rsocket-transport-local'
 
 	annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
 

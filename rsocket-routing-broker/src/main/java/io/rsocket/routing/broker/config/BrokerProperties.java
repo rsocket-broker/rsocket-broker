@@ -58,6 +58,7 @@ public class BrokerProperties extends TransportProperties {
 				.getSimpleName() + "[", "]")
 				.add("brokerId=" + brokerId)
 				.add("brokers=" + brokers)
+				.add("custom=" + getCustom())
 				.add("tcp=" + getTcp())
 				.add("websocket=" + getWebsocket())
 				.toString();

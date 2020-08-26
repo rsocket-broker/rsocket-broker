@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.rsocket.routing.broker.spring.test;
+package io.rsocket.routing.broker.spring;
 
 import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.config.TcpProperties;
