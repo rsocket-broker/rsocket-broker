@@ -18,7 +18,6 @@ package io.rsocket.routing.broker.spring;
 
 import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.config.TcpProperties;
-import io.rsocket.routing.broker.spring.BrokerAutoConfiguration;
 import io.rsocket.routing.common.Id;
 import org.junit.jupiter.api.Test;
 
