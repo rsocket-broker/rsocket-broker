@@ -84,6 +84,11 @@ public class RemoteRSocketLocator implements RSocketLocator {
 	}
 
 	private List<RSocket> members(Tags tags) {
+		// TODO: should this be configurable?
+		if (tags == null || tags.isEmpty()) {
+			// fail if tags are emtpy
+			throw new IllegalArgumentException("tags may not be empty");
+		}
 		List<RSocket> members = MEMBERS.get();
 		members.clear();
 		List<RSocket> query = rSocketIndex.query(tags);
