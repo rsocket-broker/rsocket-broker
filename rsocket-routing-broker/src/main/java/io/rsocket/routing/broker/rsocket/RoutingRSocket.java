@@ -48,10 +48,11 @@ public class RoutingRSocket implements RSocket {
 			//TODO: metadata enrichment?
 
 			return located.flatMap(rSocket -> rSocket.fireAndForget(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO fnf", e))));
-		} catch (Throwable e) {
+					.onErrorResume(Mono::error)); //TODO: error handling?
+		}
+		catch (Throwable e) {
 			payload.release();
-			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
+			return Mono.error(e); //TODO: error handling?
 		}
 	}
 
@@ -62,10 +63,11 @@ public class RoutingRSocket implements RSocket {
 			Mono<RSocket> located = rSocketLocator.apply(tags);
 
 			return located.flatMap(rSocket -> rSocket.requestResponse(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO rr", e))));
-		} catch (Throwable e) {
+					.onErrorResume(Mono::error)); //TODO: error handling?
+		}
+		catch (Throwable e) {
 			payload.release();
-			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
+			return Mono.error(e); //TODO: error handling?
 		}
 	}
 
@@ -76,10 +78,11 @@ public class RoutingRSocket implements RSocket {
 			Mono<RSocket> located = rSocketLocator.apply(tags);
 
 			return located.flatMap(rSocket -> rSocket.metadataPush(payload)
-					.onErrorResume(e -> Mono.error(new RuntimeException("TODO mp", e))));
-		} catch (Throwable e) {
+					.onErrorResume(Mono::error)); //TODO: error handling?
+		}
+		catch (Throwable e) {
 			payload.release();
-			return Mono.error(new RuntimeException("TODO: fill out values", e)); //TODO:
+			return Mono.error(e); //TODO: error handling?
 		}
 	}
 
@@ -90,10 +93,11 @@ public class RoutingRSocket implements RSocket {
 			Mono<RSocket> located = rSocketLocator.apply(tags);
 
 			return located.flatMapMany(rSocket -> rSocket.requestStream(payload)
-					.onErrorResume(e -> Flux.error(new RuntimeException("TODO", e))));
-		} catch (Throwable e) {
+					.onErrorResume(Mono::error)); //TODO: error handling?
+		}
+		catch (Throwable e) {
 			payload.release();
-			return Flux.error(new RuntimeException("TODO: fill out values", e)); //TODO:
+			return Flux.error(e); //TODO: error handling?
 		}
 	}
 
@@ -107,12 +111,11 @@ public class RoutingRSocket implements RSocket {
 					Tags tags = tagsExtractor.apply(payload);
 					Mono<RSocket> located = rSocketLocator.apply(tags);
 					return located.flatMapMany(rSocket -> rSocket.requestChannel(flux.skip(1).startWith(payload))
-							.onErrorResume(e -> Flux.error(new RuntimeException("TODO rc", e))));
+							.onErrorResume(Mono::error)); //TODO: error handling?
 				}
 				catch (Throwable e) {
 					payload.release();
-					return Flux
-							.error(new RuntimeException("TODO: fill out values", e)); //TODO:
+					return Flux.error(e); //TODO: error handling?
 				}
 			}
 			return flux;
