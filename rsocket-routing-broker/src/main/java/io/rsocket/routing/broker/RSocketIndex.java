@@ -44,11 +44,16 @@ public class RSocketIndex implements IndexedMap<Id, RSocket, Tags> {
 	}
 
 	public RSocket put(Id key, RSocket value, Tags indexable) {
-		logger.debug("indexing RSocket for Id {} tags {}", key, indexable);
+		if (logger.isDebugEnabled()) {
+			logger.debug("indexing RSocket for Id {} tags {}", key, indexable);
+		}
 		return indexedMap.put(key, rSocketTransformer.apply(value), indexable);
 	}
 
 	public RSocket remove(Id key) {
+		if (logger.isDebugEnabled()) {
+			logger.debug("removing RSocket for Id {}", key);
+		}
 		// TODO: call RSocket.dispose();
 		return indexedMap.remove(key);
 	}
@@ -69,8 +74,12 @@ public class RSocketIndex implements IndexedMap<Id, RSocket, Tags> {
 		return indexedMap.values();
 	}
 
-	public List<RSocket> query(Tags indexable) {
-		return indexedMap.query(indexable);
+	public List<RSocket> query(Tags tags) {
+		List<RSocket> results = indexedMap.query(tags);
+		if (logger.isTraceEnabled()) {
+			logger.trace("found for Tags {} results {}", tags, results);
+		}
+		return results;
 	}
 
 }
