@@ -109,7 +109,7 @@ public class PingPongApp {
 		}
 	}
 
-	static ByteBuf encodeRouteSetup(RSocketStrategies strategies, Id routeId, String serviceName) {
+	static ByteBuf encodeRouteSetup(Id routeId, String serviceName) {
 		Tags tags = Tags.builder()
 				.with("current-time", String.valueOf(System.currentTimeMillis()))
 				.with(WellKnownKey.TIME_ZONE, System.currentTimeMillis() + "")
@@ -122,7 +122,7 @@ public class PingPongApp {
 		return composite;
 	}
 
-	static ByteBuf encodeAddress(RSocketStrategies strategies, Id originRouteId, String serviceName) {
+	static ByteBuf encodeAddress(Id originRouteId, String serviceName) {
 		Tags tags = Tags.builder().with(WellKnownKey.SERVICE_NAME, serviceName)
 				.buildTags();
 		ByteBuf address = AddressFlyweight
@@ -162,9 +162,6 @@ public class PingPongApp {
 
 		private Logger logger = LoggerFactory.getLogger(getClass());
 
-		@Autowired
-		private RSocketStrategies strategies;
-
 		private final Id id;
 
 		private final AtomicInteger pongsReceived = new AtomicInteger();
@@ -192,7 +189,7 @@ public class PingPongApp {
 
 			logger.debug("ping.take: {}", take);
 
-			ByteBuf metadata = encodeRouteSetup(strategies, id, "ping");
+			ByteBuf metadata = encodeRouteSetup(id, "ping");
 			Payload setupPayload = DefaultPayload.create(EMPTY_BUFFER, metadata);
 
 			pongFlux = RSocketConnector.create().payloadDecoder(PayloadDecoder.ZERO_COPY)
@@ -223,8 +220,7 @@ public class PingPongApp {
 					.requestChannel(Flux.interval(Duration.ofSeconds(1)).map(i -> {
 						ByteBuf data = ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT,
 								"ping" + id);
-						ByteBuf routingMetadata = encodeAddress(strategies,
-								id, "pong");
+						ByteBuf routingMetadata = encodeAddress(id, "pong");
 						logger.debug("Sending ping" + id);
 						return DefaultPayload.create(data, routingMetadata);
 						// onBackpressure is needed in case pong is not available yet
@@ -257,9 +253,6 @@ public class PingPongApp {
 		private final Id routeId = new Id(0, 3L);
 		private Logger logger = LoggerFactory.getLogger(getClass());
 
-		@Autowired
-		private RSocketStrategies strategies;
-
 		private final AtomicInteger pingsReceived = new AtomicInteger();
 
 		@Override
@@ -285,7 +278,7 @@ public class PingPongApp {
 			//MicrometerRSocketInterceptor interceptor = new MicrometerRSocketInterceptor(
 			//		meterRegistry, Tag.of("component", "pong"));
 
-			ByteBuf metadata = encodeRouteSetup(strategies, routeId, "pong");
+			ByteBuf metadata = encodeRouteSetup(routeId, "pong");
 			RSocketConnector.create().metadataMimeType(COMPOSITE_MIME_TYPE.toString())
 					.setupPayload(DefaultPayload.create(EMPTY_BUFFER, metadata))
 					/*.addRequesterPlugin(interceptor)*/
@@ -311,8 +304,7 @@ public class PingPongApp {
 					}).map(PingPongApp::reply).map(reply -> {
 						ByteBuf data = ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT,
 								reply);
-						ByteBuf routingMetadata = encodeAddress(strategies,
-								routeId, "ping");
+						ByteBuf routingMetadata = encodeAddress(routeId, "ping");
 						return DefaultPayload.create(data, routingMetadata);
 					});
 				}
