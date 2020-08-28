@@ -14,6 +14,7 @@ subprojects {
 	sourceCompatibility = '1.8'
 
 	repositories {
+		mavenLocal()
 		mavenCentral()
 		maven { url 'https://repo.spring.io/milestone' }
 		if (version.endsWith('SNAPSHOT')) {
@@ -22,7 +23,6 @@ subprojects {
 				url 'https://oss.jfrog.org/artifactory/oss-snapshot-local'
 			}
 		}
-		mavenLocal()
 	}
 
 	dependencyManagement {
@@ -34,6 +34,7 @@ subprojects {
 		}
 
 		dependencies {
+			dependency "io.rsocket.routing:rsocket-routing-client:${rsocketRoutingClientVersion}"
 			dependency "io.rsocket.routing:rsocket-routing-common:${rsocketRoutingClientVersion}"
 			dependency "io.rsocket.routing:rsocket-routing-frames:${rsocketRoutingClientVersion}"
 			dependency "org.agrona:agrona:${agronaVersion}"
