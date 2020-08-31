@@ -22,9 +22,6 @@ import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
 import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
-import io.rsocket.routing.broker.config.BrokerProperties;
-import io.rsocket.routing.broker.config.ClusterBrokerProperties;
-import io.rsocket.routing.broker.config.TransportProperties;
 import io.rsocket.routing.broker.loadbalance.LoadBalancer;
 import io.rsocket.routing.broker.loadbalance.WeightedLoadBalancer;
 import io.rsocket.routing.broker.loadbalance.WeightedRSocketFactory;
@@ -36,6 +33,9 @@ import io.rsocket.routing.broker.spring.cluster.ClusterJoinListener;
 import io.rsocket.routing.broker.spring.cluster.MessageHandlerClusterSocketAcceptor;
 import io.rsocket.routing.broker.spring.cluster.ProxyConnections;
 import io.rsocket.routing.broker.spring.cluster.RouteJoinListener;
+import io.rsocket.routing.common.spring.ClientTransportFactory;
+import io.rsocket.routing.common.spring.DefaultClientTransportFactory;
+import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.frames.RoutingFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,7 +136,7 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	public RemoteRSocketLocator remoteRSocketLocator(BrokerProperties properties,
 			RoutingTable routingTable, RSocketIndex index,
 			LoadBalancer.Factory loadBalancerFactory, ProxyConnections connections) {
-		return new RemoteRSocketLocator(properties, routingTable, index,
+		return new RemoteRSocketLocator(properties.getBrokerId(), routingTable, index,
 				loadBalancerFactory, connections::get);
 	}
 
@@ -203,12 +203,19 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		}
 
 		@Bean
+		@ConditionalOnMissingBean
+		public DefaultClientTransportFactory defaultClientTransportFactory() {
+			return new DefaultClientTransportFactory();
+		}
+
+		@Bean
 		public ClusterJoinListener clusterJoinListener(BrokerProperties properties,
 				BrokerConnections brokerConnections, ProxyConnections proxyConnections,
 				RSocketMessageHandler messageHandler, RSocketStrategies strategies,
+				ObjectProvider<ClientTransportFactory> transportFactories,
 				RoutingRSocketFactory routingRSocketFactory) {
 			return new ClusterJoinListener(properties, brokerConnections, proxyConnections,
-					messageHandler, strategies, routingRSocketFactory);
+					messageHandler, strategies, routingRSocketFactory, transportFactories);
 		}
 
 		@Bean
@@ -250,7 +257,7 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	private static RSocketServerFactory findRSocketServerFactory(TransportProperties properties, ObjectProvider<ServerTransportFactory> factories) {
 		return factories.orderedStream().filter(factory -> factory.supports(properties)).findFirst()
 				.map(factory -> factory.create(properties))
-				.orElseThrow(() -> new IllegalStateException("Unknown transport " + properties));
+				.orElseThrow(() -> new IllegalArgumentException("Unknown transport " + properties));
 	}
 
 	/* for testing */ static class BrokerRSocketServerBootstrap extends RSocketServerBootstrap {

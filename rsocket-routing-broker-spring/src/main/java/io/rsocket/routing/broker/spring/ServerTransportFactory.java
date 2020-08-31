@@ -16,13 +16,9 @@
 
 package io.rsocket.routing.broker.spring;
 
-import io.rsocket.routing.broker.config.TransportProperties;
+import io.rsocket.routing.common.spring.TransportFactory;
 
 import org.springframework.boot.rsocket.server.RSocketServerFactory;
 
-public interface ServerTransportFactory {
-
-	boolean supports(TransportProperties properties);
-
-	RSocketServerFactory create(TransportProperties properties);
+public interface ServerTransportFactory extends TransportFactory<RSocketServerFactory> {
 }

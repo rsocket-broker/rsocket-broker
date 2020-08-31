@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package io.rsocket.routing.broker.config;
+package io.rsocket.routing.broker.spring;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 
 import io.rsocket.routing.common.Id;
+import io.rsocket.routing.common.spring.TransportProperties;
 
 // TODO: does the broker reuse client properties?
 public class BrokerProperties extends TransportProperties {

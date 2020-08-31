@@ -21,7 +21,6 @@ import java.util.Map;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
-import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.cluster.ProxyConnections;
 import io.rsocket.routing.frames.RoutingFrame;
@@ -39,7 +38,7 @@ public class MetadataExtractorBrokerSocketAcceptor extends BrokerSocketAcceptor 
 			RoutingTable routingTable, RSocketIndex rSocketIndex,
 			RoutingRSocketFactory routingRSocketFactory, MetadataExtractor metadataExtractor,
 			ProxyConnections proxyConnections) {
-		super(properties, routingTable, rSocketIndex, routingRSocketFactory, connectionSetupPayload -> {
+		super(properties.getBrokerId(), routingTable, rSocketIndex, routingRSocketFactory, connectionSetupPayload -> {
 			MimeType mimeType = MimeType
 					.valueOf(connectionSetupPayload.metadataMimeType());
 			Map<String, Object> setupMetadata = metadataExtractor.extract(connectionSetupPayload,

@@ -21,7 +21,7 @@ import java.time.Duration;
 import io.rsocket.exceptions.ApplicationErrorException;
 import io.rsocket.exceptions.RejectedSetupException;
 import io.rsocket.routing.broker.RoutingTable;
-import io.rsocket.routing.broker.config.BrokerProperties;
+import io.rsocket.routing.broker.spring.BrokerProperties;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
 import io.rsocket.routing.frames.RoutingFrame;

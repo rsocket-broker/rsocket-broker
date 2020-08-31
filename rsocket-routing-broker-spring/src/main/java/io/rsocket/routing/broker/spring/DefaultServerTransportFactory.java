@@ -18,8 +18,8 @@ package io.rsocket.routing.broker.spring;
 
 import java.util.stream.Collectors;
 
-import io.rsocket.routing.broker.config.HostPortProperties;
-import io.rsocket.routing.broker.config.TransportProperties;
+import io.rsocket.routing.common.spring.TransportProperties;
+import io.rsocket.routing.common.spring.TransportProperties.HostPortProperties;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.PropertyMapper;

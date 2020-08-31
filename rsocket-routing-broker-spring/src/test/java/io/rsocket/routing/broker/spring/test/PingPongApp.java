@@ -32,11 +32,12 @@ import io.rsocket.metadata.CompositeMetadataCodec;
 import io.rsocket.metadata.TaggingMetadataCodec;
 import io.rsocket.metadata.WellKnownMimeType;
 import io.rsocket.routing.broker.spring.MimeTypes;
+import io.rsocket.routing.client.RoutingRSocketClient;
+import io.rsocket.routing.client.RoutingRSocketConnector;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.AddressFlyweight;
-import io.rsocket.routing.frames.RouteSetupFlyweight;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.util.DefaultPayload;
 import io.rsocket.util.RSocketProxy;
@@ -109,20 +110,8 @@ public class PingPongApp {
 		}
 	}
 
-	static ByteBuf encodeRouteSetup(Id routeId, String serviceName) {
-		Tags tags = Tags.builder()
-				.with("current-time", String.valueOf(System.currentTimeMillis()))
-				.with(WellKnownKey.TIME_ZONE, System.currentTimeMillis() + "")
-				.buildTags();
-		ByteBuf routeSetup = RouteSetupFlyweight
-				.encode(ByteBufAllocator.DEFAULT, routeId, serviceName, tags);
 
-		CompositeByteBuf composite = encodeComposite(routeSetup, MimeTypes.ROUTING_FRAME_MIME_TYPE
-				.toString());
-		return composite;
-	}
-
-	static ByteBuf encodeAddress(Id originRouteId, String serviceName) {
+	private static ByteBuf encodeAddress(Id originRouteId, String serviceName) {
 		Tags tags = Tags.builder().with(WellKnownKey.SERVICE_NAME, serviceName)
 				.buildTags();
 		ByteBuf address = AddressFlyweight
@@ -166,8 +155,6 @@ public class PingPongApp {
 
 		private final AtomicInteger pongsReceived = new AtomicInteger();
 
-		private Flux<String> pongFlux;
-
 		public Ping(Long id) {
 			this.id = new Id(0, id);
 		}
@@ -189,20 +176,12 @@ public class PingPongApp {
 
 			logger.debug("ping.take: {}", take);
 
-			ByteBuf metadata = encodeRouteSetup(id, "ping");
-			Payload setupPayload = DefaultPayload.create(EMPTY_BUFFER, metadata);
+			RoutingRSocketClient client = RoutingRSocketConnector.create()
+					.routeId(id)
+					.serviceName("ping")
+					.toRSocketClient(TcpClientTransport.create(port));
 
-			pongFlux = RSocketConnector.create().payloadDecoder(PayloadDecoder.ZERO_COPY)
-					.metadataMimeType(COMPOSITE_MIME_TYPE.toString())
-					.setupPayload(setupPayload)//.addRequesterPlugin(interceptor)
-					.connect(TcpClientTransport.create(port)) // proxy
-					.log("startPing" + id)
-					.flatMapMany(socket -> doPing(take, socket)).cast(String.class)
-					.doOnSubscribe(o -> {
-						if (logger.isDebugEnabled()) {
-							logger.debug("ping doOnSubscribe");
-						}
-					});
+			Flux<? extends String> pongFlux = Flux.from(doPing(take, client));
 
 			boolean subscribe = env.getProperty("ping.subscribe", Boolean.class, true);
 
@@ -215,14 +194,17 @@ public class PingPongApp {
 			startDaemonThread("ping" + id, onClose);
 		}
 
-		Publisher<? extends String> doPing(Integer take, RSocket socket) {
-			Flux<String> pong = socket
+		//Publisher<? extends String> doPing(Integer take, RSocket socket) {
+		Publisher<? extends String> doPing(Integer take, RoutingRSocketClient client) {
+			Flux<String> pong = client
 					.requestChannel(Flux.interval(Duration.ofSeconds(1)).map(i -> {
 						ByteBuf data = ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT,
 								"ping" + id);
-						ByteBuf routingMetadata = encodeAddress(id, "pong");
+						CompositeByteBuf compositeMetadata = client.allocator().compositeBuffer();
+						//client.encodeAddressMetadata(compositeMetadata, "pong");
+						client.encodeAddressMetadata(compositeMetadata, tags -> tags.with(WellKnownKey.SERVICE_NAME, "pong"));
 						logger.debug("Sending ping" + id);
-						return DefaultPayload.create(data, routingMetadata);
+						return DefaultPayload.create(data, compositeMetadata);
 						// onBackpressure is needed in case pong is not available yet
 					}).log("doPing")
 							.onBackpressureDrop(payload -> logger
@@ -230,19 +212,11 @@ public class PingPongApp {
 					.map(Payload::getDataUtf8).doOnNext(str -> {
 						int received = pongsReceived.incrementAndGet();
 						logger.info("received {}({}) in Ping {}", str, received, id);
-					}).doFinally(signal -> socket.dispose());
+					}).doFinally(signal -> client.dispose());
 			if (take != null) {
 				return pong.take(take);
 			}
 			return pong;
-		}
-
-		public Flux<String> getPongFlux() {
-			return pongFlux;
-		}
-
-		public int getPongsReceived() {
-			return pongsReceived.get();
 		}
 
 	}
@@ -278,12 +252,14 @@ public class PingPongApp {
 			//MicrometerRSocketInterceptor interceptor = new MicrometerRSocketInterceptor(
 			//		meterRegistry, Tag.of("component", "pong"));
 
-			ByteBuf metadata = encodeRouteSetup(routeId, "pong");
-			RSocketConnector.create().metadataMimeType(COMPOSITE_MIME_TYPE.toString())
-					.setupPayload(DefaultPayload.create(EMPTY_BUFFER, metadata))
-					/*.addRequesterPlugin(interceptor)*/
-					.acceptor((setup, sendingSocket) -> Mono
-							.just(accept(sendingSocket)))
+			RoutingRSocketConnector.create()
+					.routeId(routeId)
+					.serviceName("pong")
+					.configure(connector -> {
+						/*.addRequesterPlugin(interceptor)*/
+						connector.acceptor((setup, sendingSocket) -> Mono
+								.just(accept(sendingSocket)));
+					})
 					.connect(TcpClientTransport.create(port)) // proxy
 					.block();
 

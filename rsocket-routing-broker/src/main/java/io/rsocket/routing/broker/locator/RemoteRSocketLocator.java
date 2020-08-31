@@ -27,7 +27,6 @@ import io.netty.util.concurrent.FastThreadLocal;
 import io.rsocket.RSocket;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
-import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.loadbalance.LoadBalancer;
 import io.rsocket.routing.broker.loadbalance.LoadBalancer.CompletionContext;
 import io.rsocket.routing.broker.loadbalance.LoadBalancer.CompletionContext.Status;
@@ -67,16 +66,16 @@ public class RemoteRSocketLocator implements RSocketLocator {
 		};
 	}
 
-	private final BrokerProperties properties;
+	private final Id brokerId;
 	private final RoutingTable routingTable;
 	private final RSocketIndex rSocketIndex;
 	private final LoadBalancer.Factory loadBalancerFactory;
 	private final Function<BrokerInfo, RSocket> brokerInfoRSocketFunction;
 
-	public RemoteRSocketLocator(BrokerProperties properties, RoutingTable routingTable,
+	public RemoteRSocketLocator(Id brokerId, RoutingTable routingTable,
 			RSocketIndex rSocketIndex, LoadBalancer.Factory loadBalancerFactory,
 			Function<BrokerInfo, RSocket> brokerInfoRSocketFunction) {
-		this.properties = properties;
+		this.brokerId = brokerId;
 		this.routingTable = routingTable;
 		this.rSocketIndex = rSocketIndex;
 		this.loadBalancerFactory = loadBalancerFactory;
@@ -101,12 +100,12 @@ public class RemoteRSocketLocator implements RSocketLocator {
 		found.clear();
 
 		for (RouteJoin routeJoin : routingTable.find(tags)) {
-			Id brokerId = routeJoin.getBrokerId();
-			if (!Objects.equals(properties.getBrokerId(), brokerId) && !found
-					.contains(brokerId)) {
-				found.add(brokerId);
+			Id joinedBrokerId = routeJoin.getBrokerId();
+			if (!Objects.equals(this.brokerId, joinedBrokerId) && !found
+					.contains(joinedBrokerId)) {
+				found.add(joinedBrokerId);
 
-				BrokerInfo brokerInfo = BrokerInfo.from(brokerId).build();
+				BrokerInfo brokerInfo = BrokerInfo.from(joinedBrokerId).build();
 				members.add(brokerInfoRSocketFunction.apply(brokerInfo));
 			}
 		}

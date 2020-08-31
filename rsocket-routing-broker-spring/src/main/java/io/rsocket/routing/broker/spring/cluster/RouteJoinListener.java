@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 import io.rsocket.routing.broker.RoutingTable;
-import io.rsocket.routing.broker.config.BrokerProperties;
+import io.rsocket.routing.broker.spring.BrokerProperties;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
 import org.slf4j.Logger;

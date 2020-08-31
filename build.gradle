@@ -36,6 +36,7 @@ subprojects {
 		dependencies {
 			dependency "io.rsocket.routing:rsocket-routing-client:${rsocketRoutingClientVersion}"
 			dependency "io.rsocket.routing:rsocket-routing-common:${rsocketRoutingClientVersion}"
+			dependency "io.rsocket.routing:rsocket-routing-common-spring:${rsocketRoutingClientVersion}"
 			dependency "io.rsocket.routing:rsocket-routing-frames:${rsocketRoutingClientVersion}"
 			dependency "org.agrona:agrona:${agronaVersion}"
 			dependency "org.assertj:assertj-core:${assertjVersion}"

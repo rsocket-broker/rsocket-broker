@@ -25,7 +25,6 @@ import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
-import io.rsocket.routing.broker.config.BrokerProperties;
 import io.rsocket.routing.broker.rsocket.ErrorOnDisconnectRSocket;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.common.Id;
@@ -46,7 +45,7 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 	protected static final Logger logger = LoggerFactory
 			.getLogger(BrokerSocketAcceptor.class);
 
-	protected final BrokerProperties properties;
+	protected final Id brokerId;
 	protected final RoutingTable routingTable;
 	protected final RSocketIndex rSocketIndex;
 	protected final Function<ConnectionSetupPayload, RoutingFrame> payloadExtractor;
@@ -54,20 +53,20 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 	protected final Consumer<BrokerInfo> brokerInfoCleaner;
 	protected final RoutingRSocketFactory routingRSocketFactory;
 
-	public BrokerSocketAcceptor(BrokerProperties properties, RoutingTable routingTable,
+	public BrokerSocketAcceptor(Id brokerId, RoutingTable routingTable,
 			RSocketIndex rSocketIndex, RoutingRSocketFactory routingRSocketFactory,
 			Function<ConnectionSetupPayload, RoutingFrame> payloadExtractor,
 			BiConsumer<BrokerInfo, RSocket> brokerInfoConsumer,
 			Consumer<BrokerInfo> brokerInfoCleaner) {
+		this.brokerId = brokerId;
 		this.routingTable = routingTable;
 		this.rSocketIndex = rSocketIndex;
 		this.routingRSocketFactory = routingRSocketFactory;
 		this.payloadExtractor = payloadExtractor;
-		this.properties = properties;
 		this.brokerInfoConsumer = brokerInfoConsumer;
 		this.brokerInfoCleaner = brokerInfoCleaner;
 
-		logger.info("Starting Broker {}", properties.getBrokerId());
+		logger.info("Starting Broker {}", brokerId);
 	}
 
 	@Override
@@ -150,7 +149,7 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
  	 */
 	private RouteJoin toRouteJoin(RouteSetup routeSetup) {
 		return RouteJoin.builder()
-				.brokerId(properties.getBrokerId())
+				.brokerId(brokerId)
 				.routeId(routeSetup.getRouteId())
 				.serviceName(routeSetup.getServiceName())
 				.with(routeSetup.getTags())

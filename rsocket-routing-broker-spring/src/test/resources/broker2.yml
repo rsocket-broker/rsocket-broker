@@ -3,10 +3,10 @@ io.rsocket.routing.broker:
   cluster.tcp.port: 7012
   broker-id: 00000000-0000-0000-0000-000000000012
   brokers:
-    - cluster:
+    - cluster.tcp:
         host: localhost
         port: 7011
-      proxy:
+      proxy.tcp:
         host: localhost
         port: 8011
 

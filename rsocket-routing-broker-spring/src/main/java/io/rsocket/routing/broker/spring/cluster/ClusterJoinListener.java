@@ -25,18 +25,21 @@ import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.core.DefaultConnectionSetupPayload;
 import io.rsocket.frame.SetupFrameCodec;
-import io.rsocket.routing.broker.config.BrokerProperties;
-import io.rsocket.routing.broker.config.BrokerProperties.Broker;
-import io.rsocket.routing.broker.config.TransportProperties;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
+import io.rsocket.routing.broker.spring.BrokerProperties;
+import io.rsocket.routing.broker.spring.BrokerProperties.Broker;
 import io.rsocket.routing.broker.spring.MimeTypes;
+import io.rsocket.routing.common.spring.ClientTransportFactory;
+import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.BrokerInfoFlyweight;
+import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.DefaultPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.io.buffer.DataBufferFactory;
@@ -65,18 +68,21 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 
 	private final RSocketStrategies strategies;
 	private final RoutingRSocketFactory routingRSocketFactory;
+	private final ObjectProvider<ClientTransportFactory> transportFactories;
 
 	private RSocket rSocket;
 
 	public ClusterJoinListener(BrokerProperties properties, BrokerConnections brokerConnections,
 			ProxyConnections proxyConnections, RSocketMessageHandler messageHandler,
-			RSocketStrategies strategies, RoutingRSocketFactory routingRSocketFactory) {
+			RSocketStrategies strategies, RoutingRSocketFactory routingRSocketFactory,
+			ObjectProvider<ClientTransportFactory> transportFactories) {
 		this.properties = properties;
 		this.brokerConnections = brokerConnections;
 		this.proxyConnections = proxyConnections;
 		this.messageHandler = messageHandler;
 		this.strategies = strategies;
 		this.routingRSocketFactory = routingRSocketFactory;
+		this.transportFactories = transportFactories;
 		setupRSocket();
 	}
 
@@ -128,13 +134,12 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 		builder.rsocketConnector(rSocketConnector -> rSocketConnector
 				.acceptor((setup, sendingSocket) -> Mono.just(rSocket)));
 
-		// order of precedence, custom, websocket, tcp
-		if (transport.getWebsocket() != null) {
-			return builder.websocket(transport.getWebsocket().getUri());
-		} else if (transport.getTcp() != null) {
-			return builder.tcp(transport.getTcp().getHost(), transport.getTcp().getPort());
-		}
-		throw new IllegalArgumentException("Unknown transport " + transport);
+		ClientTransport clientTransport = transportFactories.orderedStream()
+				.filter(factory -> factory.supports(transport)).findFirst()
+				.map(factory -> factory.create(transport))
+				.orElseThrow(() -> new IllegalArgumentException("Unknown transport " + properties));
+
+		return builder.transport(clientTransport);
 	}
 
 	/**

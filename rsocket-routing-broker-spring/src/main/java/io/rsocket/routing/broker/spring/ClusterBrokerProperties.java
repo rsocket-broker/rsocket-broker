@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package io.rsocket.routing.broker.config;
+package io.rsocket.routing.broker.spring;
 
 import java.util.StringJoiner;
+
+import io.rsocket.routing.common.spring.TransportProperties;
 
 public class ClusterBrokerProperties extends TransportProperties {
 

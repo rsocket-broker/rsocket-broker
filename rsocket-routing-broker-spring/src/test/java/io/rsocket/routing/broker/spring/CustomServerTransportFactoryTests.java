@@ -20,11 +20,9 @@ import java.net.InetSocketAddress;
 
 import io.rsocket.Closeable;
 import io.rsocket.SocketAcceptor;
-import io.rsocket.routing.broker.config.BrokerProperties;
-import io.rsocket.routing.broker.config.ClusterBrokerProperties;
-import io.rsocket.routing.broker.config.TransportProperties;
 import io.rsocket.routing.broker.spring.BrokerAutoConfiguration.BrokerRSocketServerBootstrap;
 import io.rsocket.routing.common.Id;
+import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.transport.local.LocalServerTransport;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
@@ -49,7 +47,7 @@ import static org.assertj.core.api.Assertions.entry;
 		"io.rsocket.routing.broker.custom.args.name=mylocal",
 		"io.rsocket.routing.broker.cluster.custom.type=local",
 		"io.rsocket.routing.broker.cluster.custom.args.name=myclusterlocal"})
-public class CustomTransportTests {
+public class CustomServerTransportFactoryTests {
 
 	@Autowired
 	BrokerProperties properties;
