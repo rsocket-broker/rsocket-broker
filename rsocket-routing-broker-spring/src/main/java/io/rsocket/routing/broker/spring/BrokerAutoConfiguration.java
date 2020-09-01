@@ -23,6 +23,7 @@ import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
 import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
 import io.rsocket.routing.broker.loadbalance.LoadBalancer;
+import io.rsocket.routing.broker.loadbalance.RoundRobinLoadBalancer;
 import io.rsocket.routing.broker.loadbalance.WeightedLoadBalancer;
 import io.rsocket.routing.broker.loadbalance.WeightedRSocketFactory;
 import io.rsocket.routing.broker.locator.RemoteRSocketLocator;
@@ -124,12 +125,19 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		return new WeightedRSocketFactory();
 	}
 
+	// TODO: pick LoadBalancer algorithm via tags
 	@Bean
 	@ConditionalOnMissingBean
-	public LoadBalancer.Factory loadBalancerFactory() {
-		// TODO: pick LoadBalancer algorithm via tags
-		//return new RoundRobinLoadBalancer.Factory();
+	@ConditionalOnProperty(prefix = BROKER_PREFIX, name = "default-load-balancer", havingValue = "weighted")
+	public WeightedLoadBalancer.Factory weightedLoadBalancerFactory() {
 		return new WeightedLoadBalancer.Factory();
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	@ConditionalOnProperty(prefix = BROKER_PREFIX, name = "default-load-balancer", havingValue = "roundrobbin", matchIfMissing = true)
+	public RoundRobinLoadBalancer.Factory roundRobinLoadBalancerFactory() {
+		return new RoundRobinLoadBalancer.Factory();
 	}
 
 	@Bean

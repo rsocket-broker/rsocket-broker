@@ -31,6 +31,8 @@ public class BrokerProperties extends TransportProperties {
 	 */
 	private Id brokerId = Id.random();
 
+	private String defaultLoadBalancer = "roundrobin";
+
 	private List<Broker> brokers = new ArrayList<>();
 
 	public BrokerProperties() {
@@ -43,6 +45,14 @@ public class BrokerProperties extends TransportProperties {
 
 	public void setBrokerId(Id brokerId) {
 		this.brokerId = brokerId;
+	}
+
+	public String getDefaultLoadBalancer() {
+		return this.defaultLoadBalancer;
+	}
+
+	public void setDefaultLoadBalancer(String defaultLoadBalancer) {
+		this.defaultLoadBalancer = defaultLoadBalancer;
 	}
 
 	public List<Broker> getBrokers() {
@@ -58,6 +68,7 @@ public class BrokerProperties extends TransportProperties {
 		return new StringJoiner(", ", BrokerProperties.class
 				.getSimpleName() + "[", "]")
 				.add("brokerId=" + brokerId)
+				.add("defaultLoadBalancer=" + defaultLoadBalancer)
 				.add("brokers=" + brokers)
 				.add("custom=" + getCustom())
 				.add("tcp=" + getTcp())
