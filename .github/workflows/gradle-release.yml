@@ -1,0 +1,40 @@
+# This workflow will build a Java project with Gradle
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+
+name: Release Java CI with Gradle
+
+on:
+  # Trigger the workflow on push
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - '*' # Push events to matching *, i.e. 1.0, 20.15.10
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK 1.8
+      uses: actions/setup-java@v1
+      with:
+        java-version: 1.8
+    - name: Cache Gradle packages
+      uses: actions/cache@v1
+      with:
+        path: ~/.gradle/caches
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+        restore-keys: ${{ runner.os }}-gradle
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Build with Gradle
+      run: ./gradlew clean build
+    - name: Publish Packages to Bintray
+      env:
+        BINTRAY_USER: ${{ secrets.bintrayUser }}
+        BINTRAY_KEY: ${{ secrets.bintrayKey }}
+        SONATYPE_USERNAME: ${{ secrets.sonatypeUsername }}
+        SONATYPE_PASSWORD: ${{ secrets.sonatypePassword }}
+      run: ./gradlew -Pversion="${GITHUB_REF#refs/tags/}" -PbuildNumber="${GITHUB_RUN_ID}" bintrayUpload
