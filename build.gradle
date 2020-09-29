@@ -102,14 +102,14 @@ subprojects {
 
 				pkg {
 					repo = 'RSocket'
-					name = 'rsocket-routing-client'
+					name = 'rsocket-routing-broker'
 					licenses = ['Apache-2.0']
 
-					issueTrackerUrl = 'https://github.com/rsocket-routing/rsocket-routing-client/issues'
-					websiteUrl = 'https://github.com/rsocket-routing/rsocket-routing-client'
-					vcsUrl = 'https://github.com/rsocket-routing/rsocket-routing-client.git'
+					issueTrackerUrl = 'https://github.com/rsocket-routing/rsocket-routing-broker/issues'
+					websiteUrl = 'https://github.com/rsocket-routing/rsocket-routing-broker'
+					vcsUrl = 'https://github.com/rsocket-routing/rsocket-routing-broker.git'
 
-					githubRepo = 'rsocket-routing/rsocket-routing-client' //Optional Github repository
+					githubRepo = 'rsocket-routing/rsocket-routing-broker' //Optional Github repository
 					githubReleaseNotesFile = 'README.md' //Optional Github readme file
 
 					version {
