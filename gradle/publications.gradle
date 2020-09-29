@@ -1,0 +1,51 @@
+
+subprojects {
+    plugins.withType(MavenPublishPlugin) {
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    pom {
+                        name = project.name
+                        afterEvaluate {
+                            description = project.description
+                        }
+                        groupId = 'io.rsocket.routing'
+                        url = 'https://github.com/rsocket-routing'
+                        licenses {
+                            license {
+                                name = "The Apache Software License, Version 2.0"
+                                url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                                distribution = "repo"
+                            }
+                        }
+                        developers {
+                            developer {
+                                id = 'spencergibb'
+                                name = 'Spencer Gibb'
+                                email = 'sgibb@vmware.com'
+                            }
+                            developer {
+                                id = 'OlegDokuka'
+                                name = 'Oleh Dokuka'
+                                email = 'oleh.dokuka@icloud.com'
+                            }
+                        }
+                        scm {
+                            connection = 'scm:git:https://github.com/rsocket-routing/rsocket-routing-broker.git'
+                            developerConnection = 'scm:git:https://github.com/rsocket-routing/rsocket-routing-broker.git'
+                            url = 'https://github.com/rsocket-routing/rsocket-routing-broker'
+                        }
+                        versionMapping {
+                            usage('java-api') {
+                                fromResolutionResult()
+                            }
+                            usage('java-runtime') {
+                                fromResolutionResult()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
