@@ -19,9 +19,9 @@ package io.rsocket.routing.broker.locator;
 import java.util.function.Function;
 
 import io.rsocket.RSocket;
-import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.frames.Address;
 import reactor.core.publisher.Mono;
 
 // TODO: name loadbalanced rsocket locator?
-public interface RSocketLocator extends Function<Tags, Mono<RSocket>> {
+public interface RSocketLocator extends Function<Address, Mono<RSocket>> {
 }

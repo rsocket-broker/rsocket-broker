@@ -21,7 +21,7 @@ import java.util.function.Function;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.routing.broker.locator.RSocketLocator;
-import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.frames.Address;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -32,18 +32,18 @@ import reactor.core.publisher.Mono;
 public class RoutingRSocket implements RSocket {
 
 	private final RSocketLocator rSocketLocator;
-	private final Function<Payload, Tags> tagsExtractor;
+	private final Function<Payload, Address> addressExtractor;
 
-	public RoutingRSocket(RSocketLocator rSocketLocator, Function<Payload, Tags> tagsExtractor) {
+	public RoutingRSocket(RSocketLocator rSocketLocator, Function<Payload, Address> addressExtractor) {
 		this.rSocketLocator = rSocketLocator;
-		this.tagsExtractor = tagsExtractor;
+		this.addressExtractor = addressExtractor;
 	}
 
 	@Override
 	public Mono<Void> fireAndForget(Payload payload) {
 		try {
-			Tags tags = tagsExtractor.apply(payload);
-			Mono<RSocket> located = rSocketLocator.apply(tags);
+			Address address = addressExtractor.apply(payload);
+			Mono<RSocket> located = rSocketLocator.apply(address);
 
 			//TODO: metadata enrichment?
 
@@ -59,8 +59,8 @@ public class RoutingRSocket implements RSocket {
 	@Override
 	public Mono<Payload> requestResponse(Payload payload) {
 		try {
-			Tags tags = tagsExtractor.apply(payload);
-			Mono<RSocket> located = rSocketLocator.apply(tags);
+			Address address = addressExtractor.apply(payload);
+			Mono<RSocket> located = rSocketLocator.apply(address);
 
 			return located.flatMap(rSocket -> rSocket.requestResponse(payload)
 					.onErrorResume(Mono::error)); //TODO: error handling?
@@ -74,8 +74,8 @@ public class RoutingRSocket implements RSocket {
 	@Override
 	public Mono<Void> metadataPush(Payload payload) {
 		try {
-			Tags tags = tagsExtractor.apply(payload);
-			Mono<RSocket> located = rSocketLocator.apply(tags);
+			Address address = addressExtractor.apply(payload);
+			Mono<RSocket> located = rSocketLocator.apply(address);
 
 			return located.flatMap(rSocket -> rSocket.metadataPush(payload)
 					.onErrorResume(Mono::error)); //TODO: error handling?
@@ -89,8 +89,8 @@ public class RoutingRSocket implements RSocket {
 	@Override
 	public Flux<Payload> requestStream(Payload payload) {
 		try {
-			Tags tags = tagsExtractor.apply(payload);
-			Mono<RSocket> located = rSocketLocator.apply(tags);
+			Address address = addressExtractor.apply(payload);
+			Mono<RSocket> located = rSocketLocator.apply(address);
 
 			return located.flatMapMany(rSocket -> rSocket.requestStream(payload)
 					.onErrorResume(Mono::error)); //TODO: error handling?
@@ -108,8 +108,8 @@ public class RoutingRSocket implements RSocket {
 				Payload payload = first.get();
 				payload.retain();
 				try {
-					Tags tags = tagsExtractor.apply(payload);
-					Mono<RSocket> located = rSocketLocator.apply(tags);
+					Address address = addressExtractor.apply(payload);
+					Mono<RSocket> located = rSocketLocator.apply(address);
 					return located.flatMapMany(rSocket -> rSocket.requestChannel(flux.skip(1).startWith(payload))
 							.onErrorResume(Mono::error)); //TODO: error handling?
 				}

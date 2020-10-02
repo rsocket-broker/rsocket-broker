@@ -14,18 +14,7 @@
  * limitations under the License.
  */
 
-package io.rsocket.routing.broker.rsocket;
+package io.rsocket.routing.broker.spring.cluster;
 
-import java.util.Collection;
-
-import io.rsocket.RSocket;
-
-/**
- * RSocket implementation that will broadcast payloads to a
- * collection of RSockets.
- */
-public abstract class BroadcastRSocket implements RSocket {
-
-	public abstract Collection<? extends RSocket> getRSockets();
-
+public class ClusterJoinListenerTests {
 }

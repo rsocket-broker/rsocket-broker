@@ -36,6 +36,7 @@ import io.rsocket.routing.broker.spring.cluster.ProxyConnections;
 import io.rsocket.routing.broker.spring.cluster.RouteJoinListener;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
 import io.rsocket.routing.common.spring.DefaultClientTransportFactory;
+import io.rsocket.routing.common.spring.MimeTypes;
 import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.frames.RoutingFrame;
 import org.slf4j.Logger;
@@ -149,13 +150,13 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
-	public AddressTagsExtractor addressTagsExtractor(RSocketStrategies strategies) {
-		return new AddressTagsExtractor(strategies.metadataExtractor());
+	public AddressExtractor addressTagsExtractor(RSocketStrategies strategies) {
+		return new AddressExtractor(strategies.metadataExtractor());
 	}
 
 	@Bean
 	public RoutingRSocketFactory routingRSocketFactory(RemoteRSocketLocator locator,
-			AddressTagsExtractor tagsExtractor, WeightedRSocketFactory factory) {
+			AddressExtractor tagsExtractor, WeightedRSocketFactory factory) {
 		return new RoutingRSocketFactory(locator, tagsExtractor, factory);
 	}
 

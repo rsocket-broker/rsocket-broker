@@ -21,7 +21,7 @@ import java.util.function.Function;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.routing.broker.locator.RSocketLocator;
-import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.frames.Address;
 
 /**
  * Reusable factor for RoutingRSocket.
@@ -29,17 +29,17 @@ import io.rsocket.routing.common.Tags;
 public class RoutingRSocketFactory {
 
 	private final RSocketLocator rSocketLocator;
-	private final Function<Payload, Tags> tagsExtractor;
+	private final Function<Payload, Address> addressExtractor;
 	private final Function<RSocket, RSocket> rSocketTransformer;
 
-	public RoutingRSocketFactory(RSocketLocator rSocketLocator, Function<Payload, Tags> tagsExtractor,
+	public RoutingRSocketFactory(RSocketLocator rSocketLocator, Function<Payload, Address> addressExtractor,
 			Function<RSocket, RSocket> rSocketTransformer) {
 		this.rSocketLocator = rSocketLocator;
-		this.tagsExtractor = tagsExtractor;
+		this.addressExtractor = addressExtractor;
 		this.rSocketTransformer = rSocketTransformer;
 	}
 
 	public RSocket create() {
-		return rSocketTransformer.apply(new RoutingRSocket(rSocketLocator, tagsExtractor));
+		return rSocketTransformer.apply(new RoutingRSocket(rSocketLocator, addressExtractor));
 	}
 }

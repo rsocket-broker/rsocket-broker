@@ -31,8 +31,10 @@ import io.rsocket.routing.broker.loadbalance.LoadBalancer;
 import io.rsocket.routing.broker.loadbalance.LoadBalancer.CompletionContext;
 import io.rsocket.routing.broker.loadbalance.LoadBalancer.CompletionContext.Status;
 import io.rsocket.routing.broker.rsocket.ConnectingRSocket;
+import io.rsocket.routing.broker.rsocket.MulticastRSocket;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.frames.Address;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
 import org.slf4j.Logger;
@@ -114,9 +116,15 @@ public class RemoteRSocketLocator implements RSocketLocator {
 	}
 
 	@Override
-	public Mono<RSocket> apply(Tags tags) {
-		// TODO: broadcast
+	public Mono<RSocket> apply(Address address) {
+		Tags tags = address.getTags();
 
+		// multicast
+		if (address.getRoutingType() == Address.RoutingType.MULTICAST) {
+			return Mono.just(new MulticastRSocket(() -> members(tags)));
+		}
+
+		// unicast
 		List<RSocket> members = members(tags);
 		if (members.isEmpty()) {
 			return Mono.just(connectingRSocket(tags));

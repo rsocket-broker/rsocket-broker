@@ -23,6 +23,7 @@ import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.cluster.ProxyConnections;
+import io.rsocket.routing.common.spring.MimeTypes;
 import io.rsocket.routing.frames.RoutingFrame;
 
 import org.springframework.messaging.rsocket.MetadataExtractor;

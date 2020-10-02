@@ -28,11 +28,10 @@ import io.rsocket.frame.SetupFrameCodec;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.BrokerProperties;
 import io.rsocket.routing.broker.spring.BrokerProperties.Broker;
-import io.rsocket.routing.broker.spring.MimeTypes;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
+import io.rsocket.routing.common.spring.MimeTypes;
 import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.frames.BrokerInfo;
-import io.rsocket.routing.frames.BrokerInfoFlyweight;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.DefaultPayload;
 import org.slf4j.Logger;
@@ -88,8 +87,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 
 	@Override
 	public void onApplicationEvent(ApplicationReadyEvent event) {
-		BrokerInfo localBrokerInfo = BrokerInfo
-				.from(properties.getBrokerId()).build();
+		BrokerInfo localBrokerInfo = BrokerInfo.from(properties.getBrokerId()).build();
 		// TODO: tags
 		for (Broker broker : properties.getBrokers()) {
 			logger.info("connecting to {}", broker);
@@ -160,13 +158,12 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 				.dataBufferFactory();
 		NettyDataBufferFactory ndbf = (NettyDataBufferFactory) dataBufferFactory;
 		ByteBufAllocator byteBufAllocator = ndbf.getByteBufAllocator();
-		BrokerInfo brokerInfo = BrokerInfo.from(properties.getBrokerId()).build();
-		ByteBuf encodedBrokerInfo = BrokerInfoFlyweight
-				.encode(byteBufAllocator, brokerInfo.getBrokerId(),
-						brokerInfo.getTimestamp(), brokerInfo.getTags());
-		Payload setupPayload = DefaultPayload.create(Unpooled.EMPTY_BUFFER,
-				//Payload setupPayload = DefaultPayload.create(encodedBrokerInfo,
-				Unpooled.EMPTY_BUFFER);
+		//BrokerInfo brokerInfo = BrokerInfo.from(properties.getBrokerId()).build();
+		//ByteBuf encoded = BrokerInfoFlyweight
+		//		.encode(byteBufAllocator, brokerInfo.getBrokerId(),
+		//				brokerInfo.getTimestamp(), brokerInfo.getTags(), 0);
+		Payload setupPayload = DefaultPayload.create(Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
+		//Payload setupPayload = DefaultPayload.create(encoded, Unpooled.EMPTY_BUFFER);
 		ByteBuf setup = SetupFrameCodec.encode(byteBufAllocator, false, 1, 1,
 				MESSAGE_RSOCKET_COMPOSITE_METADATA.getString(),
 				MimeTypes.ROUTING_FRAME_MIME_TYPE.toString(), setupPayload);

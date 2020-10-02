@@ -31,12 +31,12 @@ import io.rsocket.frame.decoder.PayloadDecoder;
 import io.rsocket.metadata.CompositeMetadataCodec;
 import io.rsocket.metadata.TaggingMetadataCodec;
 import io.rsocket.metadata.WellKnownMimeType;
-import io.rsocket.routing.broker.spring.MimeTypes;
 import io.rsocket.routing.client.RoutingRSocketClient;
 import io.rsocket.routing.client.RoutingRSocketConnector;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.common.WellKnownKey;
+import io.rsocket.routing.common.spring.MimeTypes;
 import io.rsocket.routing.frames.AddressFlyweight;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.util.DefaultPayload;
@@ -62,7 +62,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.messaging.rsocket.RSocketStrategies;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.rsocket.routing.broker.spring.MimeTypes.COMPOSITE_MIME_TYPE;
+import static io.rsocket.routing.common.spring.MimeTypes.COMPOSITE_MIME_TYPE;
 
 @SpringBootConfiguration
 @EnableAutoConfiguration
@@ -115,7 +115,7 @@ public class PingPongApp {
 		Tags tags = Tags.builder().with(WellKnownKey.SERVICE_NAME, serviceName)
 				.buildTags();
 		ByteBuf address = AddressFlyweight
-				.encode(ByteBufAllocator.DEFAULT, originRouteId, Tags.empty(), tags);
+				.encode(ByteBufAllocator.DEFAULT, originRouteId, Tags.empty(), tags, AddressFlyweight.FLAGS_U);
 
 		CompositeByteBuf composite = encodeComposite(address, MimeTypes.ROUTING_FRAME_MIME_TYPE
 				.toString());

@@ -20,34 +20,33 @@ import java.util.Map;
 import java.util.function.Function;
 
 import io.rsocket.Payload;
-import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.common.spring.MimeTypes;
 import io.rsocket.routing.frames.Address;
 
 import org.springframework.messaging.rsocket.MetadataExtractor;
 
-import static io.rsocket.routing.broker.spring.MimeTypes.COMPOSITE_MIME_TYPE;
+import static io.rsocket.routing.common.spring.MimeTypes.COMPOSITE_MIME_TYPE;
 
 /**
  * This class uses a Spring MetadataExtractor to extract metadata objects.
  */
-public class AddressTagsExtractor implements Function<Payload, Tags> {
+public class AddressExtractor implements Function<Payload, Address> {
 
 	private final MetadataExtractor metadataExtractor;
 
-	public AddressTagsExtractor(MetadataExtractor metadataExtractor) {
+	public AddressExtractor(MetadataExtractor metadataExtractor) {
 		this.metadataExtractor = metadataExtractor;
 	}
 
 	@Override
-	public Tags apply(Payload payload) {
+	public Address apply(Payload payload) {
 		Map<String, Object> payloadMetadata = metadataExtractor
 				.extract(payload, COMPOSITE_MIME_TYPE);
 		if (payloadMetadata.containsKey(MimeTypes.ROUTING_FRAME_METADATA_KEY)) {
-			Address address = (Address) payloadMetadata
+			return (Address) payloadMetadata
 					.get(MimeTypes.ROUTING_FRAME_METADATA_KEY);
-			return address.getTags();
 		}
 
-		return Tags.empty();
+		return null;
 	}
 }
