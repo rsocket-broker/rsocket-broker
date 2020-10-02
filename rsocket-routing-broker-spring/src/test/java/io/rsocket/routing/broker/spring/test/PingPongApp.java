@@ -110,27 +110,6 @@ public class PingPongApp {
 		}
 	}
 
-
-	private static ByteBuf encodeAddress(Id originRouteId, String serviceName) {
-		Tags tags = Tags.builder().with(WellKnownKey.SERVICE_NAME, serviceName)
-				.buildTags();
-		ByteBuf address = AddressFlyweight
-				.encode(ByteBufAllocator.DEFAULT, originRouteId, Tags.empty(), tags, AddressFlyweight.FLAGS_U);
-
-		CompositeByteBuf composite = encodeComposite(address, MimeTypes.ROUTING_FRAME_MIME_TYPE
-				.toString());
-		return composite;
-	}
-
-	private static CompositeByteBuf encodeComposite(ByteBuf byteBuf, String mimeType) {
-		CompositeByteBuf composite = ByteBufAllocator.DEFAULT.compositeBuffer();
-		CompositeMetadataCodec
-				.encodeAndAddMetadata(composite, ByteBufAllocator.DEFAULT,
-						mimeType, byteBuf);
-		return composite;
-	}
-
-
 	private static void startDaemonThread(String name, MonoProcessor<Void> onClose) {
 		Thread awaitThread =
 				new Thread(name + "-thread") {
@@ -144,7 +123,6 @@ public class PingPongApp {
 		awaitThread.setDaemon(false);
 		awaitThread.start();
 	}
-
 
 	public static class Ping
 			implements Ordered, ApplicationListener<ApplicationReadyEvent> {
@@ -228,6 +206,7 @@ public class PingPongApp {
 		private Logger logger = LoggerFactory.getLogger(getClass());
 
 		private final AtomicInteger pingsReceived = new AtomicInteger();
+		private RoutingRSocketClient rSocketClient;
 
 		@Override
 		public int getOrder() {
@@ -252,7 +231,7 @@ public class PingPongApp {
 			//MicrometerRSocketInterceptor interceptor = new MicrometerRSocketInterceptor(
 			//		meterRegistry, Tag.of("component", "pong"));
 
-			RoutingRSocketConnector.create()
+			rSocketClient = RoutingRSocketConnector.create()
 					.routeId(routeId)
 					.serviceName("pong")
 					.configure(connector -> {
@@ -260,7 +239,9 @@ public class PingPongApp {
 						connector.acceptor((setup, sendingSocket) -> Mono
 								.just(accept(sendingSocket)));
 					})
-					.connect(TcpClientTransport.create(port)) // proxy
+					.toRSocketClient(TcpClientTransport.create(port));
+
+			rSocketClient.source() // proxy
 					.block();
 
 			MonoProcessor<Void> onClose = MonoProcessor.create();
@@ -270,7 +251,7 @@ public class PingPongApp {
 
 		@SuppressWarnings("Duplicates")
 		RSocket accept(RSocket rSocket) {
-			RSocket pong = new RSocketProxy(rSocket) {
+			return new RSocketProxy(rSocket) {
 
 				@Override
 				public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
@@ -280,84 +261,12 @@ public class PingPongApp {
 					}).map(PingPongApp::reply).map(reply -> {
 						ByteBuf data = ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT,
 								reply);
-						ByteBuf routingMetadata = encodeAddress(routeId, "ping");
+						CompositeByteBuf routingMetadata = rSocketClient.allocator().compositeBuffer();
+						rSocketClient.encodeAddressMetadata(routingMetadata, "ping");
 						return DefaultPayload.create(data, routingMetadata);
 					});
 				}
 			};
-			return pong;
-		}
-
-		public int getPingsReceived() {
-			return pingsReceived.get();
-		}
-
-	}
-
-
-	public static class ClusterClient
-			implements Ordered, ApplicationListener<ApplicationReadyEvent> {
-
-		private Logger logger = LoggerFactory.getLogger(getClass());
-
-		@Autowired
-		private RSocketStrategies strategies;
-
-		private final Id id;
-
-		public ClusterClient() {
-			this.id = new Id(0, 55);
-		}
-
-		@Override
-		public int getOrder() {
-			return 0;
-		}
-
-		@Override
-		public void onApplicationEvent(ApplicationReadyEvent event) {
-			logger.info("Starting ClusterClient {}", id);
-			ConfigurableEnvironment env = event.getApplicationContext().getEnvironment();
-			Integer port = env.getProperty("spring.rsocket.server.port",
-					Integer.class, 7001);
-
-			//ByteBuf metadata = encodeRouteSetup(strategies, id, "ping");
-			Payload setupPayload = DefaultPayload.create(EMPTY_BUFFER, EMPTY_BUFFER);
-
-			Flux<String> flux = RSocketConnector.create()
-					.payloadDecoder(PayloadDecoder.ZERO_COPY)
-					.metadataMimeType(COMPOSITE_MIME_TYPE.toString())
-					.setupPayload(setupPayload)
-					.connect(TcpClientTransport.create(port)) // proxy
-					.log("startClusterClient" + id)
-					.flatMapMany(this::doHello).cast(String.class)
-					.doOnSubscribe(o -> {
-						if (logger.isDebugEnabled()) {
-							logger.debug("ClusterClient doOnSubscribe");
-						}
-					});
-
-			boolean subscribe = env
-					.getProperty("ClusterClient.subscribe", Boolean.class, true);
-
-			if (subscribe) {
-				flux.subscribe();
-			}
-		}
-
-		Publisher<? extends String> doHello(RSocket socket) {
-			ByteBuf data = ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT,
-					"World " + id);
-			ByteBuf routingMetadata = TaggingMetadataCodec
-					.createRoutingMetadata(ByteBufAllocator.DEFAULT,
-							Collections.singletonList("hello")).getContent();
-			CompositeByteBuf composite = encodeComposite(routingMetadata, WellKnownMimeType.MESSAGE_RSOCKET_ROUTING
-					.toString());
-			Payload payload = DefaultPayload.create(data, composite);
-			return socket.requestResponse(payload)
-					.map(Payload::getDataUtf8).doOnNext(str -> {
-						logger.info("received {} in doHello", str);
-					}).doFinally(signal -> socket.dispose());
 		}
 
 	}
