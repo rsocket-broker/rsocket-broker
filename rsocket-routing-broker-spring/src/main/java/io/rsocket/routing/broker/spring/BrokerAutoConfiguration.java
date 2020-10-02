@@ -16,6 +16,8 @@
 
 package io.rsocket.routing.broker.spring;
 
+import java.util.concurrent.CancellationException;
+
 import io.rsocket.SocketAcceptor;
 import io.rsocket.routing.broker.Broker;
 import io.rsocket.routing.broker.RSocketIndex;
@@ -39,8 +41,11 @@ import io.rsocket.routing.common.spring.DefaultClientTransportFactory;
 import io.rsocket.routing.common.spring.MimeTypes;
 import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.frames.RoutingFrame;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Hooks;
 
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
@@ -69,6 +74,8 @@ import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHa
 @AutoConfigureAfter({RSocketStrategiesAutoConfiguration.class, BrokerRSocketStrategiesAutoConfiguration.class})
 public class BrokerAutoConfiguration implements InitializingBean {
 
+	private static final Log log = LogFactory.getLog(BrokerAutoConfiguration.class);
+
 	public static final String BROKER_PREFIX = "io.rsocket.routing.broker";
 
 	private final ApplicationContext context;
@@ -79,6 +86,15 @@ public class BrokerAutoConfiguration implements InitializingBean {
 
 	@Override
 	public void afterPropertiesSet() {
+		Hooks.onErrorDropped(t -> {
+			if (t instanceof CancellationException && log.isDebugEnabled()) {
+				log.debug("dropped cancellation error", t);
+			}
+			else if (log.isWarnEnabled()) {
+				log.warn("dropped error", t);
+			}
+		});
+
 		RSocketStrategies rSocketStrategies = this.context
 				.getBean(RSocketStrategies.class);
 		MetadataExtractor metadataExtractor = rSocketStrategies.metadataExtractor();
