@@ -23,5 +23,5 @@ import io.rsocket.routing.frames.Address;
 import reactor.core.publisher.Mono;
 
 // TODO: name loadbalanced rsocket locator?
-public interface RSocketLocator extends Function<Address, Mono<RSocket>> {
+public interface RSocketLocator extends Function<Address, RSocket> {
 }

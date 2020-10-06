@@ -43,14 +43,10 @@ public class RoutingRSocket implements RSocket {
 	public Mono<Void> fireAndForget(Payload payload) {
 		try {
 			Address address = addressExtractor.apply(payload);
-			Mono<RSocket> located = rSocketLocator.apply(address);
+			RSocket located = rSocketLocator.apply(address);
 
-			//TODO: metadata enrichment?
-
-			return located.flatMap(rSocket -> rSocket.fireAndForget(payload)
-					.onErrorResume(t -> Mono.error(handleError(t))));
-		}
-		catch (Throwable t) {
+			return located.fireAndForget(payload);
+		} catch (Throwable t) {
 			payload.release();
 			return Mono.error(handleError(t));
 		}
@@ -60,12 +56,10 @@ public class RoutingRSocket implements RSocket {
 	public Mono<Payload> requestResponse(Payload payload) {
 		try {
 			Address address = addressExtractor.apply(payload);
-			Mono<RSocket> located = rSocketLocator.apply(address);
+			RSocket located = rSocketLocator.apply(address);
 
-			return located.flatMap(rSocket -> rSocket.requestResponse(payload)
-					.onErrorResume(t -> Mono.error(handleError(t))));
-		}
-		catch (Throwable t) {
+			return located.requestResponse(payload);
+		} catch (Throwable t) {
 			payload.release();
 			return Mono.error(handleError(t));
 		}
@@ -75,12 +69,10 @@ public class RoutingRSocket implements RSocket {
 	public Mono<Void> metadataPush(Payload payload) {
 		try {
 			Address address = addressExtractor.apply(payload);
-			Mono<RSocket> located = rSocketLocator.apply(address);
+			RSocket located = rSocketLocator.apply(address);
 
-			return located.flatMap(rSocket -> rSocket.metadataPush(payload)
-					.onErrorResume(t -> Mono.error(handleError(t))));
-		}
-		catch (Throwable t) {
+			return located.metadataPush(payload);
+		} catch (Throwable t) {
 			payload.release();
 			return Mono.error(handleError(t));
 		}
@@ -90,12 +82,10 @@ public class RoutingRSocket implements RSocket {
 	public Flux<Payload> requestStream(Payload payload) {
 		try {
 			Address address = addressExtractor.apply(payload);
-			Mono<RSocket> located = rSocketLocator.apply(address);
+			RSocket located = rSocketLocator.apply(address);
 
-			return located.flatMapMany(rSocket -> rSocket.requestStream(payload)
-					.onErrorResume(t -> Flux.error(handleError(t))));
-		}
-		catch (Throwable t) {
+			return located.requestStream(payload);
+		} catch (Throwable t) {
 			payload.release();
 			return Flux.error(handleError(t));
 		}
@@ -106,14 +96,13 @@ public class RoutingRSocket implements RSocket {
 		return Flux.from(payloads).switchOnFirst((first, flux) -> {
 			if (first.hasValue()) {
 				Payload payload = first.get();
-				payload.retain();
 				try {
 					Address address = addressExtractor.apply(payload);
-					Mono<RSocket> located = rSocketLocator.apply(address);
-					return located.flatMapMany(rSocket -> rSocket.requestChannel(flux.skip(1).startWith(payload))
-							.onErrorResume(t -> Flux.error(handleError(t))));
+					RSocket located = rSocketLocator.apply(address);
+					return located.requestChannel(flux);
 				}
 				catch (Throwable t) {
+					//noinspection ConstantConditions
 					payload.release();
 					return Flux.error(handleError(t));
 				}

@@ -139,8 +139,7 @@ public class BrokerSocketAcceptor implements SocketAcceptor {
 
 	private RSocket wrapSendingSocket(RSocket sendingSocket, RoutingFrame routingFrame) {
 		ErrorOnDisconnectRSocket rSocket = new ErrorOnDisconnectRSocket(sendingSocket);
-		 rSocket.onClose().doFinally(s -> logger.info(
-		 		"Closing socket for {}", routingFrame));
+		rSocket.onClose().doFinally(s -> logger.info("Closing socket for {}", routingFrame));
 		return rSocket;
 	}
 

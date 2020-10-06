@@ -25,12 +25,10 @@ import java.util.function.Function;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.rsocket.RSocket;
+import io.rsocket.loadbalance.LoadbalanceStrategy;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
-import io.rsocket.routing.broker.loadbalance.LoadBalancer;
-import io.rsocket.routing.broker.loadbalance.LoadBalancer.CompletionContext;
-import io.rsocket.routing.broker.loadbalance.LoadBalancer.CompletionContext.Status;
-import io.rsocket.routing.broker.rsocket.ConnectingRSocket;
+import io.rsocket.loadbalance.ResolvingRSocket;
 import io.rsocket.routing.broker.rsocket.MulticastRSocket;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
@@ -39,15 +37,13 @@ import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Mono;
 
 /**
  * RSocketLocator that merges RSockets from the local index and from remote brokers.
  */
 public class RemoteRSocketLocator implements RSocketLocator {
 
-	private static final Logger logger = LoggerFactory
-			.getLogger(RemoteRSocketLocator.class);
+	private static final Logger logger = LoggerFactory.getLogger(RemoteRSocketLocator.class);
 
 	private static final FastThreadLocal<List<RSocket>> MEMBERS;
 	private static final FastThreadLocal<Set<Id>> FOUND;
@@ -68,19 +64,19 @@ public class RemoteRSocketLocator implements RSocketLocator {
 		};
 	}
 
-	private final Id brokerId;
-	private final RoutingTable routingTable;
-	private final RSocketIndex rSocketIndex;
-	private final LoadBalancer.Factory loadBalancerFactory;
+	private final Id                            brokerId;
+	private final RoutingTable                  routingTable;
+	private final RSocketIndex                  rSocketIndex;
+	private final LoadbalanceStrategy           loadbalanceStrategy;
 	private final Function<BrokerInfo, RSocket> brokerInfoRSocketFunction;
 
 	public RemoteRSocketLocator(Id brokerId, RoutingTable routingTable,
-			RSocketIndex rSocketIndex, LoadBalancer.Factory loadBalancerFactory,
+			RSocketIndex rSocketIndex, LoadbalanceStrategy loadbalanceStrategy,
 			Function<BrokerInfo, RSocket> brokerInfoRSocketFunction) {
 		this.brokerId = brokerId;
 		this.routingTable = routingTable;
 		this.rSocketIndex = rSocketIndex;
-		this.loadBalancerFactory = loadBalancerFactory;
+		this.loadbalanceStrategy = loadbalanceStrategy;
 		this.brokerInfoRSocketFunction = brokerInfoRSocketFunction;
 	}
 
@@ -116,48 +112,40 @@ public class RemoteRSocketLocator implements RSocketLocator {
 	}
 
 	@Override
-	public Mono<RSocket> apply(Address address) {
+	public RSocket apply(Address address) {
 		Tags tags = address.getTags();
 
 		// multicast
 		if (address.getRoutingType() == Address.RoutingType.MULTICAST) {
-			return Mono.just(new MulticastRSocket(() -> members(tags)));
+			return new MulticastRSocket(() -> members(tags));
 		}
 
 		// unicast
 		List<RSocket> members = members(tags);
-		if (members.isEmpty()) {
-			return Mono.just(connectingRSocket(tags));
+		final int size = members.size();
+		switch (size) {
+			case 0:
+				return connectingRSocket(tags);
+			case 1:
+				return members.get(0);
+			default:
+				return loadbalance(members, tags);
 		}
-
-		return loadbalance(members, tags);
 	}
 
-	private ConnectingRSocket connectingRSocket(Tags tags) {
-		return new ConnectingRSocket(routingTable.joinEvents(tags)
+	private ResolvingRSocket connectingRSocket(Tags tags) {
+		return new ResolvingRSocket(routingTable.joinEvents(tags)
 				.next()
-				.flatMap(routeSetup -> {
+				.map(routeSetup -> {
 					List<RSocket> found = members(tags);
-					if (logger.isWarnEnabled() && (found == null || found
-							.isEmpty())) {
+					if (logger.isWarnEnabled() && found.isEmpty()) {
 						logger.warn("Unable to locate RSockets for tags {}", tags);
 					}
 					return loadbalance(found, tags);
 				}));
 	}
 
-	private Mono<RSocket> loadbalance(List<RSocket> rSockets, Tags tags) {
-		// TODO: loadbalance
-		return loadBalancerFactory.getInstance(tags).choose(rSockets)
-				.map(response -> {
-					if (response.hasRSocket()) {
-						RSocket rSocket = response.getRSocket();
-						response.onComplete(new CompletionContext(Status.SUCCESSS));
-						return rSocket;
-					}
-					response.onComplete(new CompletionContext(Status.DISCARD));
-					// TODO: return empty?
-					return new RSocket() { };
-				});
+	private RSocket loadbalance(List<RSocket> rSockets, Tags tags) {
+		return loadbalanceStrategy.select(rSockets);
 	}
 }
