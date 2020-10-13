@@ -30,16 +30,13 @@ public class RoutingRSocketFactory {
 
 	private final RSocketLocator rSocketLocator;
 	private final Function<Payload, Address> addressExtractor;
-	private final Function<RSocket, RSocket> rSocketTransformer;
 
-	public RoutingRSocketFactory(RSocketLocator rSocketLocator, Function<Payload, Address> addressExtractor,
-			Function<RSocket, RSocket> rSocketTransformer) {
+	public RoutingRSocketFactory(RSocketLocator rSocketLocator, Function<Payload, Address> addressExtractor) {
 		this.rSocketLocator = rSocketLocator;
 		this.addressExtractor = addressExtractor;
-		this.rSocketTransformer = rSocketTransformer;
 	}
 
 	public RSocket create() {
-		return rSocketTransformer.apply(new RoutingRSocket(rSocketLocator, addressExtractor));
+		return new RoutingRSocket(rSocketLocator, addressExtractor);
 	}
 }

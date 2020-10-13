@@ -17,17 +17,18 @@
 package io.rsocket.routing.broker.spring;
 
 import java.util.concurrent.CancellationException;
+import java.util.function.Function;
 
 import io.rsocket.SocketAcceptor;
+import io.rsocket.loadbalance.LoadbalanceStrategy;
+import io.rsocket.loadbalance.RoundRobinLoadbalanceStrategy;
+import io.rsocket.loadbalance.SimpleWeightedRSocket;
+import io.rsocket.loadbalance.WeightedLoadbalanceStrategy;
 import io.rsocket.routing.broker.Broker;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
 import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
-import io.rsocket.routing.broker.loadbalance.LoadBalancer;
-import io.rsocket.routing.broker.loadbalance.RoundRobinLoadBalancer;
-import io.rsocket.routing.broker.loadbalance.WeightedLoadBalancer;
-import io.rsocket.routing.broker.loadbalance.WeightedRSocketFactory;
 import io.rsocket.routing.broker.locator.RemoteRSocketLocator;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.cluster.BrokerConnections;
@@ -122,8 +123,12 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
-	public RSocketIndex rSocketIndex(WeightedRSocketFactory factory) {
-		return new RSocketIndex(factory);
+	public RSocketIndex rSocketIndex(LoadbalanceStrategy loadbalanceStrategy) {
+		if (loadbalanceStrategy instanceof WeightedLoadbalanceStrategy) {
+			return new RSocketIndex(SimpleWeightedRSocket::new);
+		} else {
+			return new RSocketIndex(Function.identity());
+		}
 	}
 
 	@Bean
@@ -137,32 +142,27 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		return new ReactorResourceFactory();
 	}
 
-	@Bean
-	public WeightedRSocketFactory weightedRSocketFactory() {
-		return new WeightedRSocketFactory();
-	}
-
 	// TODO: pick LoadBalancer algorithm via tags
 	@Bean
 	@ConditionalOnMissingBean
 	@ConditionalOnProperty(prefix = BROKER_PREFIX, name = "default-load-balancer", havingValue = "weighted")
-	public WeightedLoadBalancer.Factory weightedLoadBalancerFactory() {
-		return new WeightedLoadBalancer.Factory();
+	public WeightedLoadbalanceStrategy weightedLoadBalancerFactory() {
+		return new WeightedLoadbalanceStrategy();
 	}
 
 	@Bean
 	@ConditionalOnMissingBean
 	@ConditionalOnProperty(prefix = BROKER_PREFIX, name = "default-load-balancer", havingValue = "roundrobbin", matchIfMissing = true)
-	public RoundRobinLoadBalancer.Factory roundRobinLoadBalancerFactory() {
-		return new RoundRobinLoadBalancer.Factory();
+	public RoundRobinLoadbalanceStrategy roundRobinLoadBalancerFactory() {
+		return new RoundRobinLoadbalanceStrategy();
 	}
 
 	@Bean
 	public RemoteRSocketLocator remoteRSocketLocator(BrokerProperties properties,
 			RoutingTable routingTable, RSocketIndex index,
-			LoadBalancer.Factory loadBalancerFactory, ProxyConnections connections) {
+			LoadbalanceStrategy loadbalanceStrategy, ProxyConnections connections) {
 		return new RemoteRSocketLocator(properties.getBrokerId(), routingTable, index,
-				loadBalancerFactory, connections::get);
+				loadbalanceStrategy, connections::get);
 	}
 
 	@Bean
@@ -172,8 +172,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 
 	@Bean
 	public RoutingRSocketFactory routingRSocketFactory(RemoteRSocketLocator locator,
-			AddressExtractor tagsExtractor, WeightedRSocketFactory factory) {
-		return new RoutingRSocketFactory(locator, tagsExtractor, factory);
+			AddressExtractor tagsExtractor) {
+		return new RoutingRSocketFactory(locator, tagsExtractor);
 	}
 
 	@Bean
@@ -217,8 +217,12 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		}
 
 		@Bean
-		public ProxyConnections proxyConnections(WeightedRSocketFactory factory) {
-			return new ProxyConnections(factory);
+		public ProxyConnections proxyConnections(LoadbalanceStrategy strategy) {
+			if (strategy instanceof WeightedLoadbalanceStrategy) {
+				return new ProxyConnections(SimpleWeightedRSocket::new);
+			} else {
+				return new ProxyConnections(Function.identity());
+			}
 		}
 
 		@Bean
