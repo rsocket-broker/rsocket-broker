@@ -16,7 +16,9 @@
 
 package io.rsocket.routing.broker.locator;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.rsocket.RSocket;
 import io.rsocket.loadbalance.LoadbalanceStrategy;
@@ -24,6 +26,7 @@ import io.rsocket.loadbalance.ResolvingRSocket;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.query.RSocketQuery;
 import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.Address;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,12 +40,22 @@ public class UnicastRSocketLocator implements RSocketLocator {
 
 	private final RSocketQuery rSocketQuery;
 	private final RoutingTable routingTable;
-	private final LoadbalanceStrategy loadbalanceStrategy;
+	private final String defaultLoadBalancer;
+	private final Map<String, LoadbalanceStrategy> loadbalancers = new HashMap<>();
 
-	public UnicastRSocketLocator(RSocketQuery rSocketQuery, RoutingTable routingTable, LoadbalanceStrategy loadbalanceStrategy) {
+	public UnicastRSocketLocator(RSocketQuery rSocketQuery, RoutingTable routingTable, List<Loadbalancer> loadbalancers, String defaultLoadBalancer) {
 		this.rSocketQuery = rSocketQuery;
 		this.routingTable = routingTable;
-		this.loadbalanceStrategy = loadbalanceStrategy;
+		this.defaultLoadBalancer = defaultLoadBalancer;
+		for (Loadbalancer loadbalancer : loadbalancers) {
+			if (this.loadbalancers.containsKey(loadbalancer.name()) && logger.isWarnEnabled()) {
+				logger.warn(loadbalancer.name() + " Loadbalancer already exists, overwriting.");
+			}
+			this.loadbalancers.put(loadbalancer.name(), loadbalancer.strategy());
+		}
+		if (!this.loadbalancers.containsKey(defaultLoadBalancer)) {
+			throw new IllegalStateException("No Loadbalancer for " + defaultLoadBalancer + ". Found " + this.loadbalancers.keySet());
+		}
 	}
 
 	@Override
@@ -77,6 +90,22 @@ public class UnicastRSocketLocator implements RSocketLocator {
 	}
 
 	private RSocket loadbalance(List<RSocket> rSockets, Tags tags) {
-		return loadbalanceStrategy.select(rSockets);
+		LoadbalanceStrategy strategy = null;
+		if (tags.containsKey(WellKnownKey.LB_METHOD)) {
+			String lbMethod = tags.get(WellKnownKey.LB_METHOD);
+			if (loadbalancers.containsKey(lbMethod)) {
+				strategy = loadbalancers.get(lbMethod);
+			}
+		}
+		if (strategy == null) {
+			strategy = loadbalancers.get(defaultLoadBalancer);
+		}
+		return strategy.select(rSockets);
+	}
+
+	public interface Loadbalancer {
+		String name();
+
+		LoadbalanceStrategy strategy();
 	}
 }
