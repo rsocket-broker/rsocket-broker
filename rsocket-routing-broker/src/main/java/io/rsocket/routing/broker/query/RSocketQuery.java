@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package io.rsocket.routing.broker.locator;
+package io.rsocket.routing.broker.query;
+
+import java.util.List;
 
 import io.rsocket.RSocket;
-import io.rsocket.routing.frames.Address;
-import io.rsocket.routing.frames.Address.RoutingType;
+import io.rsocket.routing.common.Tags;
 
 /**
- * Interface to query and select appropriate RSocket based on Address metadata.
- * supports(RoutingType) will be called prior to calls to locate.
+ * Represents a query object that allows users to find all RSocket instances that match a particular Tags query.
  */
-public interface RSocketLocator {
+@FunctionalInterface
+public interface RSocketQuery {
 
-	boolean supports(RoutingType routingType);
-
-	RSocket locate(Address address);
+	List<RSocket> query(Tags tags);
 }

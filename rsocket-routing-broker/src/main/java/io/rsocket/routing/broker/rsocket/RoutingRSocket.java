@@ -42,8 +42,7 @@ public class RoutingRSocket implements RSocket {
 	@Override
 	public Mono<Void> fireAndForget(Payload payload) {
 		try {
-			Address address = addressExtractor.apply(payload);
-			RSocket located = rSocketLocator.apply(address);
+			RSocket located = locate(payload);
 
 			return located.fireAndForget(payload);
 		} catch (Throwable t) {
@@ -55,8 +54,7 @@ public class RoutingRSocket implements RSocket {
 	@Override
 	public Mono<Payload> requestResponse(Payload payload) {
 		try {
-			Address address = addressExtractor.apply(payload);
-			RSocket located = rSocketLocator.apply(address);
+			RSocket located = locate(payload);
 
 			return located.requestResponse(payload);
 		} catch (Throwable t) {
@@ -68,8 +66,7 @@ public class RoutingRSocket implements RSocket {
 	@Override
 	public Mono<Void> metadataPush(Payload payload) {
 		try {
-			Address address = addressExtractor.apply(payload);
-			RSocket located = rSocketLocator.apply(address);
+			RSocket located = locate(payload);
 
 			return located.metadataPush(payload);
 		} catch (Throwable t) {
@@ -81,8 +78,7 @@ public class RoutingRSocket implements RSocket {
 	@Override
 	public Flux<Payload> requestStream(Payload payload) {
 		try {
-			Address address = addressExtractor.apply(payload);
-			RSocket located = rSocketLocator.apply(address);
+			RSocket located = locate(payload);
 
 			return located.requestStream(payload);
 		} catch (Throwable t) {
@@ -97,8 +93,7 @@ public class RoutingRSocket implements RSocket {
 			if (first.hasValue()) {
 				Payload payload = first.get();
 				try {
-					Address address = addressExtractor.apply(payload);
-					RSocket located = rSocketLocator.apply(address);
+					RSocket located = locate(payload);
 					return located.requestChannel(flux);
 				}
 				catch (Throwable t) {
@@ -109,6 +104,14 @@ public class RoutingRSocket implements RSocket {
 			}
 			return flux;
 		});
+	}
+
+	private RSocket locate(Payload payload) {
+		Address address = addressExtractor.apply(payload);
+		if (!rSocketLocator.supports(address.getRoutingType())) {
+			throw new IllegalStateException("No RSocketLocator for RoutingType " + address.getRoutingType());
+		}
+		return rSocketLocator.locate(address);
 	}
 
 	private Throwable handleError(Throwable t) {
