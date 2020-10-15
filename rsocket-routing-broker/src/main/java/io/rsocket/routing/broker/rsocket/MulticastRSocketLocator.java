@@ -20,6 +20,7 @@ import io.rsocket.RSocket;
 import io.rsocket.routing.broker.locator.RSocketLocator;
 import io.rsocket.routing.broker.query.RSocketQuery;
 import io.rsocket.routing.frames.Address;
+import io.rsocket.routing.frames.RoutingType;
 
 /**
  * RSocketLocator that returns a MulticastRSocket that uses all matching RSocket instances and combines
@@ -34,8 +35,8 @@ public class MulticastRSocketLocator implements RSocketLocator {
 	}
 
 	@Override
-	public boolean supports(Address.RoutingType routingType) {
-		return routingType == Address.RoutingType.MULTICAST;
+	public boolean supports(RoutingType routingType) {
+		return routingType == RoutingType.MULTICAST;
 	}
 
 	@Override

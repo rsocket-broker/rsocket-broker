@@ -20,6 +20,7 @@ import java.util.List;
 
 import io.rsocket.RSocket;
 import io.rsocket.routing.frames.Address;
+import io.rsocket.routing.frames.RoutingType;
 
 /**
  * Composite RSocketLocator. The provided RSocketLocator instances should be in priority sorted order, highest priority first.
@@ -33,7 +34,7 @@ public class CompositeRSocketLocator implements RSocketLocator {
 	}
 
 	@Override
-	public boolean supports(Address.RoutingType routingType) {
+	public boolean supports(RoutingType routingType) {
 		for (RSocketLocator RSocketLocator : locators) {
 			if (RSocketLocator.supports(routingType)) {
 				return true;

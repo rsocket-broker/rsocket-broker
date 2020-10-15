@@ -28,6 +28,7 @@ import io.rsocket.routing.broker.query.RSocketQuery;
 import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.Address;
+import io.rsocket.routing.frames.RoutingType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,8 +60,8 @@ public class UnicastRSocketLocator implements RSocketLocator {
 	}
 
 	@Override
-	public boolean supports(Address.RoutingType routingType) {
-		return routingType == Address.RoutingType.UNICAST;
+	public boolean supports(RoutingType routingType) {
+		return routingType == RoutingType.UNICAST;
 	}
 
 	@Override

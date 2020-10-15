@@ -18,7 +18,7 @@ package io.rsocket.routing.broker.locator;
 
 import io.rsocket.RSocket;
 import io.rsocket.routing.frames.Address;
-import io.rsocket.routing.frames.Address.RoutingType;
+import io.rsocket.routing.frames.RoutingType;
 
 /**
  * Interface to query and select appropriate RSocket based on Address metadata.
