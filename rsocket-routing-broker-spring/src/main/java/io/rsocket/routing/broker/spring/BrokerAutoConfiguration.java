@@ -19,17 +19,21 @@ package io.rsocket.routing.broker.spring;
 import java.util.concurrent.CancellationException;
 import java.util.function.Function;
 
+import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.loadbalance.LoadbalanceStrategy;
 import io.rsocket.loadbalance.RoundRobinLoadbalanceStrategy;
-import io.rsocket.loadbalance.SimpleWeightedRSocket;
+import io.rsocket.loadbalance.WeightedStatsRequestInterceptor;
 import io.rsocket.loadbalance.WeightedLoadbalanceStrategy;
+import io.rsocket.plugins.RSocketInterceptor;
+import io.rsocket.plugins.RequestInterceptor;
 import io.rsocket.routing.broker.Broker;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
 import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
 import io.rsocket.routing.broker.locator.RemoteRSocketLocator;
+import io.rsocket.routing.broker.locator.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.cluster.BrokerConnections;
 import io.rsocket.routing.broker.spring.cluster.ClusterController;
@@ -110,6 +114,20 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		}
 	}
 
+
+	@Bean
+	@ConditionalOnProperty(prefix = BROKER_PREFIX, name = "default-load-balancer", havingValue = "weighted")
+	public RSocketServerCustomizer customizer() {
+		// TODO: should always be installed if algorithm is selected based on the given
+		//       tags
+		return rSocketServer -> rSocketServer.interceptors(ir -> ir.forRequester((Function<RSocket, RequestInterceptor>) rSocket -> {
+			final WeightedStatsRequestInterceptor weightedStatsRequestInterceptor =
+					new WeightedStatsRequestInterceptor();
+			ir.forRequester((RSocketInterceptor) rSocket1 -> new WeightedStatsAwareRSocket(rSocket1, weightedStatsRequestInterceptor));
+			return weightedStatsRequestInterceptor;
+		}));
+	}
+
 	@Bean
 	// TODO: Broker class needed?
 	public Broker broker() {
@@ -123,12 +141,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
-	public RSocketIndex rSocketIndex(LoadbalanceStrategy loadbalanceStrategy) {
-		if (loadbalanceStrategy instanceof WeightedLoadbalanceStrategy) {
-			return new RSocketIndex(SimpleWeightedRSocket::new);
-		} else {
-			return new RSocketIndex(Function.identity());
-		}
+	public RSocketIndex rSocketIndex() {
+		return new RSocketIndex();
 	}
 
 	@Bean
@@ -147,7 +161,7 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	@ConditionalOnMissingBean
 	@ConditionalOnProperty(prefix = BROKER_PREFIX, name = "default-load-balancer", havingValue = "weighted")
 	public WeightedLoadbalanceStrategy weightedLoadBalancerFactory() {
-		return new WeightedLoadbalanceStrategy();
+		return new WeightedLoadbalanceStrategy(rSocket -> ((WeightedStatsAwareRSocket) rSocket).weightedStats());
 	}
 
 	@Bean
@@ -217,12 +231,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		}
 
 		@Bean
-		public ProxyConnections proxyConnections(LoadbalanceStrategy strategy) {
-			if (strategy instanceof WeightedLoadbalanceStrategy) {
-				return new ProxyConnections(SimpleWeightedRSocket::new);
-			} else {
-				return new ProxyConnections(Function.identity());
-			}
+		public ProxyConnections proxyConnections() {
+			return new ProxyConnections();
 		}
 
 		@Bean

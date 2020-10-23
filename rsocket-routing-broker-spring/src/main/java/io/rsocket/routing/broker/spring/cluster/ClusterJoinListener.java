@@ -16,6 +16,8 @@
 
 package io.rsocket.routing.broker.spring.cluster;
 
+import java.util.function.Function;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -25,6 +27,10 @@ import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.core.DefaultConnectionSetupPayload;
 import io.rsocket.frame.SetupFrameCodec;
+import io.rsocket.loadbalance.WeightedStatsRequestInterceptor;
+import io.rsocket.plugins.RSocketInterceptor;
+import io.rsocket.plugins.RequestInterceptor;
+import io.rsocket.routing.broker.locator.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.BrokerProperties;
 import io.rsocket.routing.broker.spring.BrokerProperties.Broker;
@@ -108,10 +114,10 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 					.flatMap(remoteBrokerInfo -> {
 						RSocketRequester requester2 = connect(broker
 								.getProxy(), null, localBrokerInfo, routingRSocketFactory.create());
-						return requester2.rsocketClient().source().map(rSocket2 -> {
+						return requester2.rsocketClient().source().map(requesterRSocket -> {
 							// 5- save broker requester
-							proxyConnections.put(remoteBrokerInfo, rSocket2);
-							return rSocket2;
+							proxyConnections.put(remoteBrokerInfo, requesterRSocket);
+							return requesterRSocket;
 						});
 					})
 					.subscribe();
@@ -119,7 +125,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 	}
 
 	private RSocketRequester connect(TransportProperties transport, Object data,
-			Object metadata, RSocket rSocket) {
+			Object metadata, RSocket responderRSocket) {
 		RSocketRequester.Builder builder = RSocketRequester.builder()
 				.rsocketStrategies(strategies)
 				.dataMimeType(MimeTypes.ROUTING_FRAME_MIME_TYPE);
@@ -130,7 +136,14 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 			builder.setupMetadata(metadata, MimeTypes.ROUTING_FRAME_MIME_TYPE);
 		}
 		builder.rsocketConnector(rSocketConnector -> rSocketConnector
-				.acceptor((setup, sendingSocket) -> Mono.just(rSocket)));
+
+				.interceptors(ir -> ir.forRequester((Function<RSocket, RequestInterceptor>) requesterRSocket -> {
+					final WeightedStatsRequestInterceptor weightedStatsRequestInterceptor =
+							new WeightedStatsRequestInterceptor();
+					ir.forRequester((RSocketInterceptor) rSocket1 -> new WeightedStatsAwareRSocket(rSocket1, weightedStatsRequestInterceptor));
+					return weightedStatsRequestInterceptor;
+				}))
+				.acceptor((setup, sendingSocket) -> Mono.just(responderRSocket)));
 
 		ClientTransport clientTransport = transportFactories.orderedStream()
 				.filter(factory -> factory.supports(transport)).findFirst()

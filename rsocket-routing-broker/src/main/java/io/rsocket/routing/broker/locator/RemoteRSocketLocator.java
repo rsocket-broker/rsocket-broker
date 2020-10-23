@@ -30,6 +30,7 @@ import io.rsocket.loadbalance.ResolvingRSocket;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.rsocket.MulticastRSocket;
+import io.rsocket.routing.broker.rsocket.ResolvingRSocket;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.frames.Address;

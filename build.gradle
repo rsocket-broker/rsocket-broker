@@ -14,15 +14,12 @@ subprojects {
 	sourceCompatibility = '1.8'
 
 	repositories {
-		mavenLocal()
-		mavenCentral()
-		maven { url 'https://repo.spring.io/milestone' }
-		if (version.endsWith('SNAPSHOT')) {
-			maven { url 'https://repo.spring.io/libs-snapshot' }
-			maven {
-				url 'https://oss.jfrog.org/artifactory/oss-snapshot-local'
-			}
-		}
+	  if (version.endsWith('SNAPSHOT')) {
+		maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
+		maven { url 'https://repo.spring.io/libs-snapshot' }
+	  }
+	  mavenCentral()
+	  maven { url 'https://repo.spring.io/milestone' }
 	}
 
 	dependencyManagement {

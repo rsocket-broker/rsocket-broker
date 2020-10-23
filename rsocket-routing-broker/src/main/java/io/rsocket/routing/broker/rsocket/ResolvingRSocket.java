@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.rsocket.loadbalance;
+package io.rsocket.routing.broker.rsocket;
 
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -117,27 +117,27 @@ public final class ResolvingRSocket extends ResolvingOperator<RSocket>
 
   @Override
   public Mono<Void> fireAndForget(Payload payload) {
-    return new RequestTrackingMonoInner<>(this, payload, FrameType.REQUEST_FNF);
+    return new MonoInner<>(this, payload, FrameType.REQUEST_FNF);
   }
 
   @Override
   public Mono<Payload> requestResponse(Payload payload) {
-    return new RequestTrackingMonoInner<>(this, payload, FrameType.REQUEST_RESPONSE);
+    return new MonoInner<>(this, payload, FrameType.REQUEST_RESPONSE);
   }
 
   @Override
   public Flux<Payload> requestStream(Payload payload) {
-    return new RequestTrackingFluxInner<>(this, payload, FrameType.REQUEST_STREAM);
+    return new FluxInner<>(this, payload, FrameType.REQUEST_STREAM);
   }
 
   @Override
   public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
-    return new RequestTrackingFluxInner<>(this, payloads, FrameType.REQUEST_CHANNEL);
+    return new FluxInner<>(this, payloads, FrameType.REQUEST_CHANNEL);
   }
 
   @Override
   public Mono<Void> metadataPush(Payload payload) {
-    return new RequestTrackingMonoInner<>(this, payload, FrameType.METADATA_PUSH);
+    return new MonoInner<>(this, payload, FrameType.METADATA_PUSH);
   }
 
   @Override
@@ -146,10 +146,10 @@ public final class ResolvingRSocket extends ResolvingOperator<RSocket>
     return rSocket != null ? rSocket.availability() : 0.0;
   }
 
-  static final class RequestTrackingMonoInner<RESULT>
+  static final class MonoInner<RESULT>
 		  extends MonoDeferredResolution<RESULT, RSocket> {
 
-    RequestTrackingMonoInner(ResolvingRSocket parent, Payload payload, FrameType requestType) {
+    MonoInner(ResolvingRSocket parent, Payload payload, FrameType requestType) {
       super(parent, payload, requestType);
     }
 
@@ -190,10 +190,10 @@ public final class ResolvingRSocket extends ResolvingOperator<RSocket>
     }
   }
 
-  static final class RequestTrackingFluxInner<INPUT>
+  static final class FluxInner<INPUT>
 		  extends FluxDeferredResolution<INPUT, RSocket> {
 
-    RequestTrackingFluxInner(
+    FluxInner(
         ResolvingRSocket parent, INPUT fluxOrPayload, FrameType requestType) {
       super(parent, fluxOrPayload, requestType);
     }

@@ -18,7 +18,6 @@ package io.rsocket.routing.broker;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
 
 import io.rsocket.RSocket;
 import io.rsocket.routing.broker.util.IndexedMap;
@@ -33,12 +32,6 @@ public class RSocketIndex implements IndexedMap<Id, RSocket, Tags> {
 
 	private final IndexedMap<Id, RSocket, Tags> indexedMap = new RoaringBitmapIndexedMap<>();
 
-	private final Function<RSocket, RSocket> rSocketTransformer;
-
-	public RSocketIndex(Function<RSocket, RSocket> rSocketTransformer) {
-		this.rSocketTransformer = rSocketTransformer;
-	}
-
 	public RSocket get(Id key) {
 		return indexedMap.get(key);
 	}
@@ -47,7 +40,7 @@ public class RSocketIndex implements IndexedMap<Id, RSocket, Tags> {
 		if (logger.isDebugEnabled()) {
 			logger.debug("indexing RSocket for Id {} tags {}", key, indexable);
 		}
-		return indexedMap.put(key, rSocketTransformer.apply(value), indexable);
+		return indexedMap.put(key, value, indexable);
 	}
 
 	public RSocket remove(Id key) {

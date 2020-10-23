@@ -16,8 +16,6 @@
 
 package io.rsocket.routing.broker.spring.cluster;
 
-import java.util.function.Function;
-
 import io.rsocket.RSocket;
 import io.rsocket.routing.frames.BrokerInfo;
 import reactor.core.publisher.Mono;
@@ -28,15 +26,9 @@ import reactor.core.publisher.Mono;
  */
 public class ProxyConnections extends AbstractConnections<RSocket> {
 
-	private final Function<RSocket, RSocket> rSocketTransformer;
-
-	public ProxyConnections(Function<RSocket, RSocket> rSocketTransformer) {
-		this.rSocketTransformer = rSocketTransformer;
-	}
-
 	@Override
 	public RSocket put(BrokerInfo brokerInfo, RSocket connection) {
-		return super.put(brokerInfo, rSocketTransformer.apply(connection));
+		return super.put(brokerInfo, connection);
 	}
 
 	@Override
