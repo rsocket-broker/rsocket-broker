@@ -26,15 +26,16 @@ import java.util.function.Function;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.rsocket.RSocket;
 import io.rsocket.loadbalance.LoadbalanceStrategy;
+import io.rsocket.loadbalance.ResolvingRSocket;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
-import io.rsocket.loadbalance.ResolvingRSocket;
 import io.rsocket.routing.broker.rsocket.MulticastRSocket;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.frames.Address;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
+import io.rsocket.routing.frames.RoutingType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,7 +117,7 @@ public class RemoteRSocketLocator implements RSocketLocator {
 		Tags tags = address.getTags();
 
 		// multicast
-		if (address.getRoutingType() == Address.RoutingType.MULTICAST) {
+		if (address.getRoutingType() == RoutingType.MULTICAST) {
 			return new MulticastRSocket(() -> members(tags));
 		}
 
