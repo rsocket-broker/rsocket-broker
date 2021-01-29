@@ -35,6 +35,7 @@ import io.rsocket.routing.broker.locator.CompositeRSocketLocator;
 import io.rsocket.routing.broker.locator.RSocketLocator;
 import io.rsocket.routing.broker.locator.UnicastRSocketLocator;
 import io.rsocket.routing.broker.locator.UnicastRSocketLocator.Loadbalancer;
+import io.rsocket.routing.broker.locator.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.query.CombinedRSocketQuery;
 import io.rsocket.routing.broker.query.RSocketQuery;
 import io.rsocket.routing.broker.rsocket.MulticastRSocketLocator;

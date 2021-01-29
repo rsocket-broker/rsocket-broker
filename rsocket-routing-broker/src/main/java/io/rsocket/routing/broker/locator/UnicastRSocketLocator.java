@@ -22,9 +22,9 @@ import java.util.Map;
 
 import io.rsocket.RSocket;
 import io.rsocket.loadbalance.LoadbalanceStrategy;
-import io.rsocket.loadbalance.ResolvingRSocket;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.query.RSocketQuery;
+import io.rsocket.routing.broker.rsocket.ResolvingRSocket;
 import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.Address;
