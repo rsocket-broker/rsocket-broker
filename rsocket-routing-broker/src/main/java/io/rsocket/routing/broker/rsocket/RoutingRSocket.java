@@ -20,7 +20,6 @@ import java.util.function.Function;
 
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
-import io.rsocket.routing.broker.locator.RSocketLocator;
 import io.rsocket.routing.frames.Address;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 the original author or authors.
+ * Copyright 2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.rsocket.routing.broker.locator;
+package io.rsocket.routing.broker.rsocket;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,7 +24,6 @@ import io.rsocket.RSocket;
 import io.rsocket.loadbalance.LoadbalanceStrategy;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.query.RSocketQuery;
-import io.rsocket.routing.broker.rsocket.ResolvingRSocket;
 import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.Address;

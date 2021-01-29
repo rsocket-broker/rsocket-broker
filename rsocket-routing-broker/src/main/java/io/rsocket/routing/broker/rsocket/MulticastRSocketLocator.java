@@ -17,7 +17,6 @@
 package io.rsocket.routing.broker.rsocket;
 
 import io.rsocket.RSocket;
-import io.rsocket.routing.broker.locator.RSocketLocator;
 import io.rsocket.routing.broker.query.RSocketQuery;
 import io.rsocket.routing.frames.Address;
 import io.rsocket.routing.frames.RoutingType;
