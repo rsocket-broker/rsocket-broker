@@ -17,16 +17,14 @@
 package io.rsocket.routing.broker.spring;
 
 import java.util.concurrent.CancellationException;
-import java.util.function.Function;
 
-import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.loadbalance.LoadbalanceStrategy;
 import io.rsocket.loadbalance.RoundRobinLoadbalanceStrategy;
-import io.rsocket.loadbalance.WeightedStatsRequestInterceptor;
 import io.rsocket.loadbalance.WeightedLoadbalanceStrategy;
+import io.rsocket.loadbalance.WeightedStats;
+import io.rsocket.loadbalance.WeightedStatsRequestInterceptor;
 import io.rsocket.plugins.RSocketInterceptor;
-import io.rsocket.plugins.RequestInterceptor;
 import io.rsocket.routing.broker.Broker;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
@@ -114,12 +112,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		}
 	}
 
-
 	@Bean
-	@ConditionalOnProperty(prefix = BROKER_PREFIX, name = "default-load-balancer", havingValue = "weighted")
-	public RSocketServerCustomizer customizer() {
-		// TODO: should always be installed if algorithm is selected based on the given
-		//       tags
+	public RSocketServerCustomizer weightedStatsCustomizer() {
 		return rSocketServer -> rSocketServer.interceptors(ir -> ir.forRequestsInResponder(rSocket -> {
 			final WeightedStatsRequestInterceptor weightedStatsRequestInterceptor =
 					new WeightedStatsRequestInterceptor();
@@ -162,7 +156,7 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	@ConditionalOnProperty(prefix = BROKER_PREFIX, name = "default-load-balancer", havingValue = "weighted")
 	public WeightedLoadbalanceStrategy weightedLoadBalancerFactory() {
 		return WeightedLoadbalanceStrategy.builder()
-				.weightedStatsResolver(rSocket -> ((WeightedStatsAwareRSocket) rSocket).weightedStats())
+				.weightedStatsResolver(rSocket -> ((WeightedStats) rSocket))
 				.build();
 	}
 
