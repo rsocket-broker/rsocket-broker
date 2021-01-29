@@ -1,7 +1,7 @@
 plugins {
 	id 'com.jfrog.artifactory' version '4.11.0' apply false
 	id 'com.jfrog.bintray' version '1.8.4' apply false
-	id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 }
 
 subprojects {
@@ -15,8 +15,9 @@ subprojects {
 
 	repositories {
 	  if (version.endsWith('SNAPSHOT')) {
+        mavenLocal()
+		maven { url 'https://repo.spring.io/snapshot' }
 		maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
-		maven { url 'https://repo.spring.io/libs-snapshot' }
 	  }
 	  mavenCentral()
 	  maven { url 'https://repo.spring.io/milestone' }

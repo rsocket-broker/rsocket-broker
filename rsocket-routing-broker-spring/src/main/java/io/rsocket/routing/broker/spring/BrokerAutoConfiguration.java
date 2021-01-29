@@ -120,7 +120,7 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	public RSocketServerCustomizer customizer() {
 		// TODO: should always be installed if algorithm is selected based on the given
 		//       tags
-		return rSocketServer -> rSocketServer.interceptors(ir -> ir.forRequester((Function<RSocket, RequestInterceptor>) rSocket -> {
+		return rSocketServer -> rSocketServer.interceptors(ir -> ir.forRequestsInResponder(rSocket -> {
 			final WeightedStatsRequestInterceptor weightedStatsRequestInterceptor =
 					new WeightedStatsRequestInterceptor();
 			ir.forRequester((RSocketInterceptor) rSocket1 -> new WeightedStatsAwareRSocket(rSocket1, weightedStatsRequestInterceptor));
@@ -161,7 +161,9 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	@ConditionalOnMissingBean
 	@ConditionalOnProperty(prefix = BROKER_PREFIX, name = "default-load-balancer", havingValue = "weighted")
 	public WeightedLoadbalanceStrategy weightedLoadBalancerFactory() {
-		return new WeightedLoadbalanceStrategy(rSocket -> ((WeightedStatsAwareRSocket) rSocket).weightedStats());
+		return WeightedLoadbalanceStrategy.builder()
+				.weightedStatsResolver(rSocket -> ((WeightedStatsAwareRSocket) rSocket).weightedStats())
+				.build();
 	}
 
 	@Bean

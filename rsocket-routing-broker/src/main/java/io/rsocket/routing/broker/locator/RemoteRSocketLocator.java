@@ -26,7 +26,6 @@ import java.util.function.Function;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.rsocket.RSocket;
 import io.rsocket.loadbalance.LoadbalanceStrategy;
-import io.rsocket.loadbalance.ResolvingRSocket;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.rsocket.MulticastRSocket;
