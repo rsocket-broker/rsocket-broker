@@ -16,5 +16,30 @@
 
 package io.rsocket.routing.broker.spring.cluster;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.rsocket.core.DefaultConnectionSetupPayload;
+import io.rsocket.routing.common.Id;
+import io.rsocket.routing.frames.BrokerInfoFlyweight;
+import io.rsocket.routing.frames.FrameHeaderFlyweight;
+import io.rsocket.routing.frames.FrameType;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class ClusterJoinListenerTests {
+
+	@Test
+	void testGetConnectionSetupPayload() {
+		Id id = Id.from("00000000-0000-0000-0000-000000000011");
+		DefaultConnectionSetupPayload setupPayload = ClusterJoinListener
+				.getConnectionSetupPayload(ByteBufAllocator.DEFAULT, id);
+		ByteBuf data = setupPayload.data();
+		assertThat(FrameHeaderFlyweight.frameType(data)).isEqualTo(FrameType.BROKER_INFO);
+		assertThat(BrokerInfoFlyweight.brokerId(data)).isEqualTo(id);
+		assertThat(BrokerInfoFlyweight.timestamp(data)).isGreaterThan(0);
+		assertThat(BrokerInfoFlyweight.tags(data)).isNotNull();
+
+	}
+
 }

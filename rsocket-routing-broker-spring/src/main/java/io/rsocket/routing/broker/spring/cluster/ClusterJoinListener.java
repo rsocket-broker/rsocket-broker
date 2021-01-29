@@ -25,13 +25,18 @@ import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.core.DefaultConnectionSetupPayload;
 import io.rsocket.frame.SetupFrameCodec;
+import io.rsocket.loadbalance.WeightedStatsRequestInterceptor;
+import io.rsocket.plugins.RSocketInterceptor;
+import io.rsocket.routing.broker.locator.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.BrokerProperties;
 import io.rsocket.routing.broker.spring.BrokerProperties.Broker;
+import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
 import io.rsocket.routing.common.spring.MimeTypes;
 import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.frames.BrokerInfo;
+import io.rsocket.routing.frames.BrokerInfoFlyweight;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.DefaultPayload;
 import org.slf4j.Logger;
@@ -108,10 +113,10 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 					.flatMap(remoteBrokerInfo -> {
 						RSocketRequester requester2 = connect(broker
 								.getProxy(), null, localBrokerInfo, routingRSocketFactory.create());
-						return requester2.rsocketClient().source().map(rSocket2 -> {
+						return requester2.rsocketClient().source().map(requesterRSocket -> {
 							// 5- save broker requester
-							proxyConnections.put(remoteBrokerInfo, rSocket2);
-							return rSocket2;
+							proxyConnections.put(remoteBrokerInfo, requesterRSocket);
+							return requesterRSocket;
 						});
 					})
 					.subscribe();
@@ -119,7 +124,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 	}
 
 	private RSocketRequester connect(TransportProperties transport, Object data,
-			Object metadata, RSocket rSocket) {
+			Object metadata, RSocket responderRSocket) {
 		RSocketRequester.Builder builder = RSocketRequester.builder()
 				.rsocketStrategies(strategies)
 				.dataMimeType(MimeTypes.ROUTING_FRAME_MIME_TYPE);
@@ -130,7 +135,14 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 			builder.setupMetadata(metadata, MimeTypes.ROUTING_FRAME_MIME_TYPE);
 		}
 		builder.rsocketConnector(rSocketConnector -> rSocketConnector
-				.acceptor((setup, sendingSocket) -> Mono.just(rSocket)));
+
+				.interceptors(ir -> ir.forRequestsInResponder(requesterRSocket -> {
+					final WeightedStatsRequestInterceptor weightedStatsRequestInterceptor =
+							new WeightedStatsRequestInterceptor();
+					ir.forRequester((RSocketInterceptor) rSocket1 -> new WeightedStatsAwareRSocket(rSocket1, weightedStatsRequestInterceptor));
+					return weightedStatsRequestInterceptor;
+				}))
+				.acceptor((setup, sendingSocket) -> Mono.just(responderRSocket)));
 
 		ClientTransport clientTransport = transportFactories.orderedStream()
 				.filter(factory -> factory.supports(transport)).findFirst()
@@ -158,12 +170,15 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 				.dataBufferFactory();
 		NettyDataBufferFactory ndbf = (NettyDataBufferFactory) dataBufferFactory;
 		ByteBufAllocator byteBufAllocator = ndbf.getByteBufAllocator();
-		//BrokerInfo brokerInfo = BrokerInfo.from(properties.getBrokerId()).build();
-		//ByteBuf encoded = BrokerInfoFlyweight
-		//		.encode(byteBufAllocator, brokerInfo.getBrokerId(),
-		//				brokerInfo.getTimestamp(), brokerInfo.getTags(), 0);
-		Payload setupPayload = DefaultPayload.create(Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
-		//Payload setupPayload = DefaultPayload.create(encoded, Unpooled.EMPTY_BUFFER);
+		return getConnectionSetupPayload(byteBufAllocator, properties.getBrokerId());
+	}
+
+	static DefaultConnectionSetupPayload getConnectionSetupPayload(ByteBufAllocator byteBufAllocator, Id brokerId) {
+		BrokerInfo brokerInfo = BrokerInfo.from(brokerId).build();
+		ByteBuf encoded = BrokerInfoFlyweight
+				.encode(byteBufAllocator, brokerInfo.getBrokerId(),
+						brokerInfo.getTimestamp(), brokerInfo.getTags(), 0);
+		Payload setupPayload = DefaultPayload.create(encoded.retain(), Unpooled.EMPTY_BUFFER);
 		ByteBuf setup = SetupFrameCodec.encode(byteBufAllocator, false, 1, 1,
 				MESSAGE_RSOCKET_COMPOSITE_METADATA.getString(),
 				MimeTypes.ROUTING_FRAME_MIME_TYPE.toString(), setupPayload);
