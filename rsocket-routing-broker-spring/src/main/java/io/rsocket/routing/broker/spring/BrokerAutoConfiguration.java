@@ -191,6 +191,16 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
+	public ProxyConnections proxyConnections() {
+		return new ProxyConnections();
+	}
+
+	@Bean
+	public BrokerConnections brokerConnections() {
+		return new BrokerConnections();
+	}
+
+	@Bean
 	public CombinedRSocketQuery combinedRSocketQuery(BrokerProperties properties,
 			RoutingTable routingTable, RSocketIndex index, ProxyConnections connections) {
 		return new CombinedRSocketQuery(properties.getBrokerId(), routingTable, index, connections::get);
@@ -259,16 +269,6 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	protected static class ClusterConfiguration {
 
 		public static final String PREFIX = BROKER_PREFIX + ".cluster";
-
-		@Bean
-		public BrokerConnections brokerConnections() {
-			return new BrokerConnections();
-		}
-
-		@Bean
-		public ProxyConnections proxyConnections() {
-			return new ProxyConnections();
-		}
 
 		@Bean
 		public ClusterController clusterController(BrokerProperties properties,
