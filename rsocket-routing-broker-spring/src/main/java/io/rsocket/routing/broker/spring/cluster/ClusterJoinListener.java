@@ -27,7 +27,7 @@ import io.rsocket.core.DefaultConnectionSetupPayload;
 import io.rsocket.frame.SetupFrameCodec;
 import io.rsocket.loadbalance.WeightedStatsRequestInterceptor;
 import io.rsocket.plugins.RSocketInterceptor;
-import io.rsocket.routing.broker.locator.WeightedStatsAwareRSocket;
+import io.rsocket.routing.broker.rsocket.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.BrokerProperties;
 import io.rsocket.routing.broker.spring.BrokerProperties.Broker;

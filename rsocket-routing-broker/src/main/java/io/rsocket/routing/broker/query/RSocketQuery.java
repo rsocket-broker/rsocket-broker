@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-package io.rsocket.routing.broker.locator;
+package io.rsocket.routing.broker.query;
 
-import java.util.function.Function;
+import java.util.List;
 
 import io.rsocket.RSocket;
-import io.rsocket.routing.frames.Address;
-import reactor.core.publisher.Mono;
+import io.rsocket.routing.common.Tags;
 
-// TODO: name loadbalanced rsocket locator?
-public interface RSocketLocator extends Function<Address, RSocket> {
+/**
+ * Represents a query object that allows users to find all RSocket instances that match a particular Tags query.
+ */
+@FunctionalInterface
+public interface RSocketQuery {
+
+	List<RSocket> query(Tags tags);
 }

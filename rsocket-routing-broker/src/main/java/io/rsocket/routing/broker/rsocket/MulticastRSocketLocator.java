@@ -16,26 +16,30 @@
 
 package io.rsocket.routing.broker.rsocket;
 
-import java.util.function.Function;
-
-import io.rsocket.Payload;
 import io.rsocket.RSocket;
+import io.rsocket.routing.broker.query.RSocketQuery;
 import io.rsocket.routing.frames.Address;
+import io.rsocket.routing.frames.RoutingType;
 
 /**
- * Reusable factor for RoutingRSocket.
+ * RSocketLocator that returns a MulticastRSocket that uses all matching RSocket instances and combines
+ * requests and responses according to the the Routing and Forwarding specification.
  */
-public class RoutingRSocketFactory {
+public class MulticastRSocketLocator implements RSocketLocator {
 
-	private final RSocketLocator rSocketLocator;
-	private final Function<Payload, Address> addressExtractor;
+	private final RSocketQuery rSocketQuery;
 
-	public RoutingRSocketFactory(RSocketLocator rSocketLocator, Function<Payload, Address> addressExtractor) {
-		this.rSocketLocator = rSocketLocator;
-		this.addressExtractor = addressExtractor;
+	public MulticastRSocketLocator(RSocketQuery rSocketQuery) {
+		this.rSocketQuery = rSocketQuery;
 	}
 
-	public RSocket create() {
-		return new RoutingRSocket(rSocketLocator, addressExtractor);
+	@Override
+	public boolean supports(RoutingType routingType) {
+		return routingType == RoutingType.MULTICAST;
+	}
+
+	@Override
+	public RSocket locate(Address address) {
+		return new MulticastRSocket(() -> rSocketQuery.query(address.getTags()));
 	}
 }

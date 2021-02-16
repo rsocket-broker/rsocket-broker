@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 the original author or authors.
+ * Copyright 2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,17 @@
 
 package io.rsocket.routing.broker.rsocket;
 
-import java.util.function.Function;
-
-import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.routing.frames.Address;
+import io.rsocket.routing.frames.RoutingType;
 
 /**
- * Reusable factor for RoutingRSocket.
+ * Interface to query and select appropriate RSocket based on Address metadata.
+ * supports(RoutingType) will be called prior to calls to locate.
  */
-public class RoutingRSocketFactory {
+public interface RSocketLocator {
 
-	private final RSocketLocator rSocketLocator;
-	private final Function<Payload, Address> addressExtractor;
+	boolean supports(RoutingType routingType);
 
-	public RoutingRSocketFactory(RSocketLocator rSocketLocator, Function<Payload, Address> addressExtractor) {
-		this.rSocketLocator = rSocketLocator;
-		this.addressExtractor = addressExtractor;
-	}
-
-	public RSocket create() {
-		return new RoutingRSocket(rSocketLocator, addressExtractor);
-	}
+	RSocket locate(Address address);
 }

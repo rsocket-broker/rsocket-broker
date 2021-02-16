@@ -38,6 +38,8 @@ subprojects {
 			dependency "io.rsocket.routing:rsocket-routing-frames:${rsocketRoutingClientVersion}"
 			dependency "org.agrona:agrona:${agronaVersion}"
 			dependency "org.assertj:assertj-core:${assertjVersion}"
+			dependency "org.mockito:mockito-core:${mockitoVersion}"
+			dependency "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
 			dependency "org.roaringbitmap:RoaringBitmap:${roaringbitmapVersion}"
 		}
 	}

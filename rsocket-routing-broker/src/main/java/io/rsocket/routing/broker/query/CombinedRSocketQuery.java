@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.rsocket.routing.broker.locator;
+package io.rsocket.routing.broker.query;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,26 +25,17 @@ import java.util.function.Function;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.rsocket.RSocket;
-import io.rsocket.loadbalance.LoadbalanceStrategy;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
-import io.rsocket.routing.broker.rsocket.MulticastRSocket;
-import io.rsocket.routing.broker.rsocket.ResolvingRSocket;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.Tags;
-import io.rsocket.routing.frames.Address;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
-import io.rsocket.routing.frames.RoutingType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * RSocketLocator that merges RSockets from the local index and from remote brokers.
+ * RSocketQuery that merges RSockets from the local index (RSocketIndex) and from remote brokers (RoutingTable).
  */
-public class RemoteRSocketLocator implements RSocketLocator {
-
-	private static final Logger logger = LoggerFactory.getLogger(RemoteRSocketLocator.class);
+public class CombinedRSocketQuery implements RSocketQuery {
 
 	private static final FastThreadLocal<List<RSocket>> MEMBERS;
 	private static final FastThreadLocal<Set<Id>> FOUND;
@@ -65,23 +56,22 @@ public class RemoteRSocketLocator implements RSocketLocator {
 		};
 	}
 
-	private final Id                            brokerId;
-	private final RoutingTable                  routingTable;
-	private final RSocketIndex                  rSocketIndex;
-	private final LoadbalanceStrategy           loadbalanceStrategy;
-	private final Function<BrokerInfo, RSocket> brokerInfoRSocketFunction;
+	private final Id brokerId;
+	private final RoutingTable routingTable;
+	private final RSocketIndex rSocketIndex;
+	private final Function<BrokerInfo, RSocket> brokerInfoRSocketMapper;
 
-	public RemoteRSocketLocator(Id brokerId, RoutingTable routingTable,
-			RSocketIndex rSocketIndex, LoadbalanceStrategy loadbalanceStrategy,
-			Function<BrokerInfo, RSocket> brokerInfoRSocketFunction) {
+	public CombinedRSocketQuery(Id brokerId, RoutingTable routingTable,
+			RSocketIndex rSocketIndex,
+			Function<BrokerInfo, RSocket> brokerInfoRSocketMapper) {
 		this.brokerId = brokerId;
 		this.routingTable = routingTable;
 		this.rSocketIndex = rSocketIndex;
-		this.loadbalanceStrategy = loadbalanceStrategy;
-		this.brokerInfoRSocketFunction = brokerInfoRSocketFunction;
+		this.brokerInfoRSocketMapper = brokerInfoRSocketMapper;
 	}
 
-	private List<RSocket> members(Tags tags) {
+	@Override
+	public List<RSocket> query(Tags tags) {
 		// TODO: should this be configurable?
 		if (tags == null || tags.isEmpty()) {
 			// fail if tags are emtpy
@@ -105,48 +95,11 @@ public class RemoteRSocketLocator implements RSocketLocator {
 				found.add(joinedBrokerId);
 
 				BrokerInfo brokerInfo = BrokerInfo.from(joinedBrokerId).build();
-				members.add(brokerInfoRSocketFunction.apply(brokerInfo));
+				members.add(brokerInfoRSocketMapper.apply(brokerInfo));
 			}
 		}
 
 		return members;
 	}
 
-	@Override
-	public RSocket apply(Address address) {
-		Tags tags = address.getTags();
-
-		// multicast
-		if (address.getRoutingType() == RoutingType.MULTICAST) {
-			return new MulticastRSocket(() -> members(tags));
-		}
-
-		// unicast
-		List<RSocket> members = members(tags);
-		final int size = members.size();
-		switch (size) {
-			case 0:
-				return connectingRSocket(tags);
-			case 1:
-				return members.get(0);
-			default:
-				return loadbalance(members, tags);
-		}
-	}
-
-	private ResolvingRSocket connectingRSocket(Tags tags) {
-		return new ResolvingRSocket(routingTable.joinEvents(tags)
-				.next()
-				.map(routeSetup -> {
-					List<RSocket> found = members(tags);
-					if (logger.isWarnEnabled() && found.isEmpty()) {
-						logger.warn("Unable to locate RSockets for tags {}", tags);
-					}
-					return loadbalance(found, tags);
-				}));
-	}
-
-	private RSocket loadbalance(List<RSocket> rSockets, Tags tags) {
-		return loadbalanceStrategy.select(rSockets);
-	}
 }
