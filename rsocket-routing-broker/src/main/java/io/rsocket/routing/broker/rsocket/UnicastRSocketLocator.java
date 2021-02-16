@@ -16,7 +16,6 @@
 
 package io.rsocket.routing.broker.rsocket;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,18 +40,13 @@ public class UnicastRSocketLocator implements RSocketLocator {
 	private final RSocketQuery rSocketQuery;
 	private final RoutingTable routingTable;
 	private final String defaultLoadBalancer;
-	private final Map<String, LoadbalanceStrategy> loadbalancers = new HashMap<>();
+	private final Map<String, LoadbalanceStrategy> loadbalancers;
 
-	public UnicastRSocketLocator(RSocketQuery rSocketQuery, RoutingTable routingTable, List<Loadbalancer> loadbalancers, String defaultLoadBalancer) {
+	public UnicastRSocketLocator(RSocketQuery rSocketQuery, RoutingTable routingTable, Map<String, LoadbalanceStrategy> loadbalancers, String defaultLoadBalancer) {
 		this.rSocketQuery = rSocketQuery;
 		this.routingTable = routingTable;
 		this.defaultLoadBalancer = defaultLoadBalancer;
-		for (Loadbalancer loadbalancer : loadbalancers) {
-			if (this.loadbalancers.containsKey(loadbalancer.name()) && logger.isWarnEnabled()) {
-				logger.warn(loadbalancer.name() + " Loadbalancer already exists, overwriting.");
-			}
-			this.loadbalancers.put(loadbalancer.name(), loadbalancer.strategy());
-		}
+		this.loadbalancers = loadbalancers;
 		if (!this.loadbalancers.containsKey(defaultLoadBalancer)) {
 			throw new IllegalStateException("No Loadbalancer for " + defaultLoadBalancer + ". Found " + this.loadbalancers.keySet());
 		}
@@ -103,9 +97,4 @@ public class UnicastRSocketLocator implements RSocketLocator {
 		return strategy.select(rSockets);
 	}
 
-	public interface Loadbalancer {
-		String name();
-
-		LoadbalanceStrategy strategy();
-	}
 }

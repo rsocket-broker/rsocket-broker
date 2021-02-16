@@ -17,13 +17,13 @@
 package io.rsocket.routing.broker.rsocket;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import io.rsocket.RSocket;
 import io.rsocket.loadbalance.LoadbalanceStrategy;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.query.RSocketQuery;
-import io.rsocket.routing.broker.rsocket.UnicastRSocketLocator.Loadbalancer;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.Address;
@@ -63,11 +63,12 @@ public class UnicastRSocketLocatorTests {
 
 	@BeforeEach
 	public void setup() {
-		Loadbalancer loadbalancer = getLoadbalancer("testlb", strategy);
-		Loadbalancer loadbalancer2 = getLoadbalancer("anotherlb", strategy2);
+		HashMap<String, LoadbalanceStrategy> loadbalancers = new HashMap<>();
+		String defaultLoadBalancerName = "testlb";
+		loadbalancers.put(defaultLoadBalancerName, strategy);
+		loadbalancers.put("anotherlb", strategy2);
 
-		locator = new UnicastRSocketLocator(rSocketQuery, routingTable, Arrays
-				.asList(loadbalancer, loadbalancer2), loadbalancer.name());
+		locator = new UnicastRSocketLocator(rSocketQuery, routingTable, loadbalancers, defaultLoadBalancerName);
 		address = Address.from(Id.random()).with(WellKnownKey.SERVICE_NAME, "service1")
 				.build();
 	}
@@ -125,20 +126,6 @@ public class UnicastRSocketLocatorTests {
 
 	private OngoingStubbing<List<RSocket>> whenRSocketQuery(RSocket... rSocket) {
 		return when(rSocketQuery.query(address.getTags())).thenReturn(Arrays.asList(rSocket));
-	}
-
-	private Loadbalancer getLoadbalancer(final String name, final LoadbalanceStrategy strategy) {
-		return new Loadbalancer() {
-			@Override
-			public String name() {
-				return name;
-			}
-
-			@Override
-			public LoadbalanceStrategy strategy() {
-				return strategy;
-			}
-		};
 	}
 
 }

@@ -26,13 +26,14 @@ import io.rsocket.routing.common.spring.TransportProperties;
 // TODO: does the broker reuse client properties?
 public class BrokerProperties extends TransportProperties {
 
-	public static final String DEFAULT_LOAD_BALANCER = "roundrobin";
+	public static final String ROUND_ROBIN_LOAD_BALANCER_NAME = "roundrobin";
+	public static final String WEIGHTED_BALANCER_NAME = "weighted";
 	/**
 	 * Broker Id.
 	 */
 	private Id brokerId = Id.random();
 
-	private String defaultLoadBalancer = DEFAULT_LOAD_BALANCER;
+	private String defaultLoadBalancer = ROUND_ROBIN_LOAD_BALANCER_NAME;
 
 	private List<Broker> brokers = new ArrayList<>();
 

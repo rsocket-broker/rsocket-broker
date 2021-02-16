@@ -16,6 +16,8 @@
 
 package io.rsocket.routing.broker.spring;
 
+import io.rsocket.loadbalance.RoundRobinLoadbalanceStrategy;
+import io.rsocket.loadbalance.WeightedLoadbalanceStrategy;
 import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
@@ -47,9 +49,7 @@ public class BrokerAutoConfigurationTests {
 		new ReactiveWebApplicationContextRunner().withConfiguration(AutoConfigurations
 				.of(BrokerAutoConfiguration.class, RSocketStrategiesAutoConfiguration.class, BrokerRSocketStrategiesAutoConfiguration.class))
 				.withPropertyValues(BrokerAutoConfiguration.BROKER_PREFIX + ".enabled=false")
-				.run(context -> {
-					assertThat(context).doesNotHaveBean(BrokerProperties.class);
-				});
+				.run(context -> assertThat(context).doesNotHaveBean(BrokerProperties.class));
 	}
 
 	@Test
@@ -70,8 +70,10 @@ public class BrokerAutoConfigurationTests {
 						RSocketMessagingAutoConfiguration.class))
 				.run(context -> {
 					assertThat(context).hasSingleBean(BrokerProperties.class);
-					assertThat(context).hasBean("weightedLoadBalancer");
-					assertThat(context).hasBean("roundRobinLoadBalancer");
+					assertThat(context).hasSingleBean(RoundRobinLoadbalanceStrategy.class);
+					assertThat(context).hasSingleBean(WeightedLoadbalanceStrategy.class);
+					assertThat(context).hasBean(BrokerProperties.ROUND_ROBIN_LOAD_BALANCER_NAME);
+					assertThat(context).hasBean(BrokerProperties.WEIGHTED_BALANCER_NAME);
 					assertThat(context).hasSingleBean(BrokerProperties.class);
 					assertThat(context).hasSingleBean(RSocketIndex.class);
 					assertThat(context).hasSingleBean(RoutingTable.class);

@@ -16,6 +16,7 @@
 
 package io.rsocket.routing.broker.spring;
 
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.stream.Collectors;
 
@@ -34,7 +35,6 @@ import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
 import io.rsocket.routing.broker.rsocket.CompositeRSocketLocator;
 import io.rsocket.routing.broker.rsocket.RSocketLocator;
 import io.rsocket.routing.broker.rsocket.UnicastRSocketLocator;
-import io.rsocket.routing.broker.rsocket.UnicastRSocketLocator.Loadbalancer;
 import io.rsocket.routing.broker.rsocket.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.query.CombinedRSocketQuery;
 import io.rsocket.routing.broker.query.RSocketQuery;
@@ -156,38 +156,16 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		return new ReactorResourceFactory();
 	}
 
-	@Bean
-	public Loadbalancer weightedLoadBalancer() {
-		WeightedLoadbalanceStrategy strategy = WeightedLoadbalanceStrategy.builder()
+	@Bean(name = BrokerProperties.WEIGHTED_BALANCER_NAME)
+	public WeightedLoadbalanceStrategy weightedLoadbalanceStrategy() {
+		return WeightedLoadbalanceStrategy.builder()
 				.weightedStatsResolver(rSocket -> ((WeightedStats) rSocket))
 				.build();
-		return new Loadbalancer() {
-			@Override
-			public String name() {
-				return "weighted";
-			}
-
-			@Override
-			public LoadbalanceStrategy strategy() {
-				return strategy;
-			}
-		};
 	}
 
-	@Bean
-	public Loadbalancer roundRobinLoadBalancer() {
-		RoundRobinLoadbalanceStrategy strategy = new RoundRobinLoadbalanceStrategy();
-		return new Loadbalancer() {
-			@Override
-			public String name() {
-				return BrokerProperties.DEFAULT_LOAD_BALANCER;
-			}
-
-			@Override
-			public LoadbalanceStrategy strategy() {
-				return strategy;
-			}
-		};
+	@Bean(name = BrokerProperties.ROUND_ROBIN_LOAD_BALANCER_NAME)
+	public RoundRobinLoadbalanceStrategy roundRobinLoadbalanceStrategy() {
+		return new RoundRobinLoadbalanceStrategy();
 	}
 
 	@Bean
@@ -213,9 +191,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 
 	@Bean
 	public UnicastRSocketLocator unicastRSocketLocator(RSocketQuery rSocketQuery, RoutingTable routingTable,
-			ObjectProvider<Loadbalancer> loadbalancers, BrokerProperties properties) {
-		return new UnicastRSocketLocator(rSocketQuery, routingTable, loadbalancers.stream()
-				.collect(Collectors.toList()), properties.getDefaultLoadBalancer());
+			Map<String, LoadbalanceStrategy> loadbalancers, BrokerProperties properties) {
+		return new UnicastRSocketLocator(rSocketQuery, routingTable, loadbalancers, properties.getDefaultLoadBalancer());
 	}
 
 	@Bean
