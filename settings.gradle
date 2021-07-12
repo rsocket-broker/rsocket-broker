@@ -6,3 +6,5 @@ rootProject.name = 'rsocket-routing-broker'
 
 include "rsocket-routing-broker"
 include "rsocket-routing-broker-spring"
+include 'rsocket-routing-http-bridge'
+

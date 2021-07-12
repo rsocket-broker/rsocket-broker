@@ -29,6 +29,7 @@ subprojects {
 			mavenBom "org.junit:junit-bom:${junitJupiterVersion}"
 			mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
 			mavenBom "io.rsocket:rsocket-bom:${rsocketVersion}"
+			mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
 		}
 
 		dependencies {
@@ -41,6 +42,7 @@ subprojects {
 			dependency "org.mockito:mockito-core:${mockitoVersion}"
 			dependency "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
 			dependency "org.roaringbitmap:RoaringBitmap:${roaringbitmapVersion}"
+			dependency "io.rsocket.routing:rsocket-routing-client-spring:${rsocketRoutingClientSpringVersion}"
 		}
 	}
 
