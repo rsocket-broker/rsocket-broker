@@ -1,4 +1,4 @@
-package io.rsocket.routing.http.bridge.config;
+package io.rsocket.routing.http.bridge.core;
 
 import java.net.URI;
 import java.util.List;
