@@ -14,33 +14,27 @@ import org.springframework.http.server.PathContainer;
  */
 class PathUtils {
 
-	private static Log LOG = LogFactory.getLog(PathUtils.class);
+	private static final Log LOG = LogFactory.getLog(PathUtils.class);
 
 	private PathUtils() {
 		throw new IllegalStateException("Must not instantiate utility class");
 	}
 
-//	static HttpRSocketExecutor.InteractionMode resolveInteractionMode(URI uri) {
-//		PathContainer path = PathContainer.parsePath(uri.getRawPath());
-//		return HttpRSocketExecutor.InteractionMode.getValue(getElements(path).get(0).value());
-//	}
-
 	static String resolveAddress(URI uri) {
-		PathContainer path = PathContainer.parsePath(uri.getRawPath());
-		return getElements(path).get(0).value();
-	}
-
-	static String resolveRoute(URI uri) {
 		PathContainer path = PathContainer.parsePath(uri.getRawPath());
 		return getElements(path).get(1).value();
 	}
 
+	static String resolveRoute(URI uri) {
+		PathContainer path = PathContainer.parsePath(uri.getRawPath());
+		return getElements(path).get(2).value();
+	}
 
 	private static List<PathContainer.Element> getElements(PathContainer path) {
 		List<PathContainer.Element> pathElements = path.elements()
 				.stream().filter(element -> !element.value().equals("/"))
 				.collect(Collectors.toList());
-		if (pathElements.size() != 2) {
+		if (pathElements.size() != 3) {
 			if (LOG.isErrorEnabled()) {
 				LOG.error("The path does not contain enough elements. InteractionMode, Address and Route segments expected.");
 			}
