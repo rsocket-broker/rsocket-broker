@@ -5,7 +5,8 @@ dependencies {
     api 'org.springframework.boot:spring-boot-starter-webflux'
     api 'org.springframework.boot:spring-boot-starter-rsocket'
     implementation 'io.rsocket.routing:rsocket-routing-client-spring'
-    implementation 'org.springframework.cloud:spring-cloud-function-web'
+    // FIXME: switch back to bom
+    implementation 'org.springframework.cloud:spring-cloud-function-web:3.2.0-SNAPSHOT'
     implementation 'org.springframework.cloud:spring-cloud-function-rsocket'
 
     annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"

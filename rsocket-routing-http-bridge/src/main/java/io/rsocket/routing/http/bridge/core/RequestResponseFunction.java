@@ -33,7 +33,6 @@ public class RequestResponseFunction extends AbstractHttpRSocketFunction<Mono<Me
 			URI uri = URI.create(uriString);
 			String route = resolveRoute(uri);
 			String address = resolveAddress(uri);
-
 			return requester
 					// TODO: handle different protocols
 					.route(route)

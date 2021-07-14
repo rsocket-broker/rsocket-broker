@@ -3,7 +3,10 @@ package io.rsocket.routing.http.bridge.config;
 import java.util.function.Function;
 
 import io.rsocket.routing.client.spring.RoutingRSocketRequester;
+import io.rsocket.routing.http.bridge.core.FireAndForgetFunction;
+import io.rsocket.routing.http.bridge.core.RequestChannelFunction;
 import io.rsocket.routing.http.bridge.core.RequestResponseFunction;
+import io.rsocket.routing.http.bridge.core.RequestStreamFunction;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -33,20 +36,17 @@ public class RSocketHttpBridgeAutoConfiguration {
 
 	@Bean
 	public Function<Flux<Message<String>>, Flux<Message<String>>> rc() {
-		// TODO
-		return messageFlux -> messageFlux.map(message -> message);
+		return new RequestChannelFunction(requester);
 	}
 
 	@Bean
 	public Function<Mono<Message<String>>, Flux<Message<String>>> rs() {
-		// TODO
-		return messageMono -> messageMono.map(message -> message).flux();
+		return new RequestStreamFunction(requester);
 	}
 
 	@Bean
 	public Function<Mono<Message<String>>, Mono<Void>> ff() {
-		// TODO
-		return messageMono -> Mono.empty();
+		return new FireAndForgetFunction(requester);
 	}
 
 }
