@@ -10,8 +10,14 @@ import io.rsocket.routing.http.bridge.core.RequestStreamFunction;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.function.context.FunctionProperties;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
@@ -21,11 +27,18 @@ import org.springframework.messaging.Message;
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(value = "spring.cloud.rsocket.routing.http.bridge.enabled", matchIfMissing = true)
+@EnableConfigurationProperties(RSocketHttpBridgeProperties.class)
 // TODO: make function deps optional + add conditional
-public class RSocketHttpBridgeAutoConfiguration {
+public class RSocketHttpBridgeAutoConfiguration implements ApplicationContextAware, InitializingBean {
 
-	@Autowired
-	RoutingRSocketRequester requester;
+	private final RoutingRSocketRequester requester;
+	private final RSocketHttpBridgeProperties properties;
+	private ConfigurableApplicationContext applicationContext;
+
+	public RSocketHttpBridgeAutoConfiguration(RoutingRSocketRequester requester, RSocketHttpBridgeProperties properties) {
+		this.requester = requester;
+		this.properties = properties;
+	}
 
 	// Stay with four different endpoints or switch to some other way of differentiating?
 
@@ -49,4 +62,18 @@ public class RSocketHttpBridgeAutoConfiguration {
 		return new FireAndForgetFunction(requester);
 	}
 
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = (ConfigurableApplicationContext) applicationContext;
+	}
+
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		FunctionProperties functionProperties = applicationContext
+				.getBean(FunctionProperties.class);
+		String definition = functionProperties.getDefinition();
+		if (definition == null && properties.isRequestResponseDefault()) {
+			functionProperties.setDefinition("rr");
+		}
+	}
 }
