@@ -1,5 +1,7 @@
 package io.rsocket.routing.http.bridge.config;
 
+import java.time.Duration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import static io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties.BRIDGE_CONFIG_PREFIX;
@@ -16,6 +18,8 @@ public class RSocketHttpBridgeProperties {
 
 	private String tagHeaderName = "X-RSocket-Tags";
 
+	private Duration timeout = Duration.ofSeconds(30);
+
 	public boolean isRequestResponseDefault() {
 		return requestResponseDefault;
 	}
@@ -30,5 +34,13 @@ public class RSocketHttpBridgeProperties {
 
 	public void setTagHeaderName(String tagHeaderName) {
 		this.tagHeaderName = tagHeaderName;
+	}
+
+	public Duration getTimeout() {
+		return timeout;
+	}
+
+	public void setTimeout(Duration timeout) {
+		this.timeout = timeout;
 	}
 }

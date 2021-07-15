@@ -21,13 +21,12 @@ abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
 
 	protected final RoutingRSocketRequester requester;
 	protected final RSocketHttpBridgeProperties properties;
-
-	// TODO: get from properties; initialise in constructor
-	protected final Duration timeout = Duration.ofSeconds(30);
+	protected final Duration timeout;
 
 	protected AbstractHttpRSocketFunction(RoutingRSocketRequester requester, RSocketHttpBridgeProperties properties) {
 		this.requester = requester;
 		this.properties = properties;
+		timeout = properties.getTimeout();
 	}
 
 	protected void logTimeout(String address, String route) {
