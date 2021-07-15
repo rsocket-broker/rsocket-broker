@@ -3,12 +3,14 @@ package io.rsocket.routing.http.bridge.core;
 import java.net.URI;
 
 import io.rsocket.routing.client.spring.RoutingRSocketRequester;
+import io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.messaging.Message;
 
+import static io.rsocket.routing.common.WellKnownKey.SERVICE_NAME;
 import static io.rsocket.routing.http.bridge.core.PathUtils.resolveAddress;
 import static io.rsocket.routing.http.bridge.core.PathUtils.resolveRoute;
 
@@ -17,10 +19,8 @@ import static io.rsocket.routing.http.bridge.core.PathUtils.resolveRoute;
  */
 public class RequestStreamFunction extends AbstractHttpRSocketFunction<Mono<Message<String>>, Flux<Message<String>>> {
 
-	private final RoutingRSocketRequester requester;
-
-	public RequestStreamFunction(RoutingRSocketRequester requester) {
-		this.requester = requester;
+	public RequestStreamFunction(RoutingRSocketRequester requester, RSocketHttpBridgeProperties properties) {
+		super(requester, properties);
 	}
 
 	@Override
@@ -33,23 +33,26 @@ public class RequestStreamFunction extends AbstractHttpRSocketFunction<Mono<Mess
 					}
 					URI uri = URI.create(uriString);
 					String route = resolveRoute(uri);
-					String address = resolveAddress(uri);
+					String serviceName = resolveAddress(uri);
+					String tagString = (String) message.getHeaders()
+							.get(properties.getTagHeaderName());
 					return requester
 							// TODO: handle different protocols
 							.route(route)
-							.address(address)
+							.address(builder -> builder.with(SERVICE_NAME, serviceName)
+									.with(buildTags(tagString)))
 							.data(message.getPayload())
 							.retrieveFlux(new ParameterizedTypeReference<Message<String>>() {
 							})
 							.timeout(timeout,
 									Flux.defer(() -> {
-										logTimeout(address, route);
+										logTimeout(serviceName, route);
 										// Mono.just("Request has timed out); ?
 										return Flux
 												.error(new IllegalArgumentException("Request has timed out."));
 									}))
 							.onErrorResume(error -> {
-								logException(error, address, route);
+								logException(error, serviceName, route);
 								return Flux.error(error);
 							});
 				}

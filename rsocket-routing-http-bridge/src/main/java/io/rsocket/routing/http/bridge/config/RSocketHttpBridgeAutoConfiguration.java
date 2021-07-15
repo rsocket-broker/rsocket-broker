@@ -44,22 +44,22 @@ public class RSocketHttpBridgeAutoConfiguration implements ApplicationContextAwa
 
 	@Bean
 	public Function<Mono<Message<String>>, Mono<Message<String>>> rr() {
-		return new RequestResponseFunction(requester);
+		return new RequestResponseFunction(requester, properties);
 	}
 
 	@Bean
 	public Function<Flux<Message<String>>, Flux<Message<String>>> rc() {
-		return new RequestChannelFunction(requester);
+		return new RequestChannelFunction(requester, properties);
 	}
 
 	@Bean
 	public Function<Mono<Message<String>>, Flux<Message<String>>> rs() {
-		return new RequestStreamFunction(requester);
+		return new RequestStreamFunction(requester, properties);
 	}
 
 	@Bean
 	public Function<Mono<Message<String>>, Mono<Void>> ff() {
-		return new FireAndForgetFunction(requester);
+		return new FireAndForgetFunction(requester, properties);
 	}
 
 	@Override
