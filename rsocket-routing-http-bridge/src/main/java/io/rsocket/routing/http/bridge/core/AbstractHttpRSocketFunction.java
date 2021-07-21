@@ -2,14 +2,23 @@ package io.rsocket.routing.http.bridge.core;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 import io.rsocket.routing.client.spring.RoutingRSocketRequester;
+import io.rsocket.routing.client.spring.RoutingRSocketRequesterBuilder;
 import io.rsocket.routing.common.Key;
 import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.common.spring.ClientTransportFactory;
+import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties;
+import io.rsocket.transport.ClientTransport;
 import org.apache.commons.logging.Log;
 
+import org.springframework.beans.factory.ObjectProvider;
+
+import static io.rsocket.routing.http.bridge.core.AbstractHttpRSocketFunction.Transport.WEBSOCKET;
 import static org.apache.commons.logging.LogFactory.getLog;
 
 /**
@@ -17,16 +26,27 @@ import static org.apache.commons.logging.LogFactory.getLog;
  */
 abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
 
+	public static final String TRANSPORT_KEY = "transport";
+	public static final String PORT_KEY = "port";
+	public static final String HOST_KEY = "host";
+	public static final String MAPPING_PATH_KEY = "mapping-path";
+
 	protected final Log LOG = getLog(getClass());
 
-	protected final RoutingRSocketRequester requester;
+	protected RoutingRSocketRequester defaultRequester;
+	protected RoutingRSocketRequesterBuilder requesterBuilder;
+	ObjectProvider<ClientTransportFactory> transportFactories;
 	protected final RSocketHttpBridgeProperties properties;
 	protected final Duration timeout;
 
-	protected AbstractHttpRSocketFunction(RoutingRSocketRequester requester, RSocketHttpBridgeProperties properties) {
-		this.requester = requester;
+	protected AbstractHttpRSocketFunction(RoutingRSocketRequesterBuilder requesterBuilder,
+			RoutingRSocketRequester defaultRequester, ObjectProvider<ClientTransportFactory> transportFactories,
+			RSocketHttpBridgeProperties properties) {
+		this.requesterBuilder = requesterBuilder;
 		this.properties = properties;
 		timeout = properties.getTimeout();
+		this.transportFactories = transportFactories;
+		this.defaultRequester = defaultRequester;
 	}
 
 	protected void logTimeout(String address, String route) {
@@ -53,6 +73,62 @@ abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
 							.with(Key.of(pair.get(0)), pair.get(1)));
 		}
 		return tagsBuilder.buildTags();
+	}
+
+	protected RoutingRSocketRequester getRequester(String brokerHeader) {
+		if (brokerHeader != null) {
+			TransportProperties broker = buildBroker(brokerHeader);
+			ClientTransport clientTransport = transportFactories
+					.orderedStream()
+					.filter(factory -> factory.supports(broker))
+					.findFirst()
+					.map(factory -> factory.create(broker))
+					.orElseThrow(() -> new IllegalStateException("Unknown transport: " + broker));
+			RoutingRSocketRequester requesterForBroker = requesterBuilder
+					.transport(clientTransport);
+			// if we don't subscribe, there won't be a connection to the broker.
+			requesterForBroker.rsocketClient().source().subscribe();
+			return requesterForBroker;
+		}
+		return defaultRequester;
+	}
+
+	protected TransportProperties buildBroker(String brokerData) {
+		String[] brokerDataPair = brokerData.toLowerCase().split(",");
+		Map<String, String> brokerDataMap = new HashMap<>();
+		Arrays.stream(brokerDataPair)
+				.map(pair -> Arrays.asList(pair.split("=")))
+				.filter(pair -> pair.size() == 2)
+				.forEach(pair -> brokerDataMap.put(pair.get(0), pair.get(1)));
+		String transport = brokerDataMap.get(TRANSPORT_KEY);
+		TransportProperties broker = new TransportProperties();
+		if (WEBSOCKET.name().equals(transport)) {
+			broker.setWebsocket(buildWebsocketBroker(brokerDataMap));
+			return broker;
+		}
+		broker.setTcp(buildTcpBroker(brokerDataMap));
+		return broker;
+		// TODO: handle custom?
+	}
+
+	private TransportProperties.TcpProperties buildTcpBroker(Map<String, String> brokerDataMap) {
+		TransportProperties.TcpProperties tcpBroker = new TransportProperties.TcpProperties();
+		tcpBroker.setHost(brokerDataMap.get(HOST_KEY));
+		tcpBroker.setPort(Integer.valueOf(brokerDataMap.getOrDefault(PORT_KEY, "0")));
+		return tcpBroker;
+	}
+
+	private TransportProperties.WebsocketProperties buildWebsocketBroker(Map<String, String> brokerDataMap) {
+		TransportProperties.WebsocketProperties websocketBroker = new TransportProperties.WebsocketProperties();
+		websocketBroker.setHost(brokerDataMap.get(HOST_KEY));
+		websocketBroker
+				.setPort(Integer.valueOf(brokerDataMap.getOrDefault(PORT_KEY, "0")));
+		websocketBroker.setMappingPath(brokerDataMap.get(MAPPING_PATH_KEY));
+		return websocketBroker;
+	}
+
+	enum Transport {
+		TCP, WEBSOCKET, CUSTOM
 	}
 
 }

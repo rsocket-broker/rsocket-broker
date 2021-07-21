@@ -3,9 +3,12 @@ package io.rsocket.routing.http.bridge.core;
 import java.net.URI;
 
 import io.rsocket.routing.client.spring.RoutingRSocketRequester;
+import io.rsocket.routing.client.spring.RoutingRSocketRequesterBuilder;
+import io.rsocket.routing.common.spring.ClientTransportFactory;
 import io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties;
 import reactor.core.publisher.Mono;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.messaging.Message;
 
@@ -18,8 +21,10 @@ import static io.rsocket.routing.http.bridge.core.PathUtils.resolveRoute;
  */
 public class RequestResponseFunction extends AbstractHttpRSocketFunction<Mono<Message<String>>, Mono<Message<String>>> {
 
-	public RequestResponseFunction(RoutingRSocketRequester requester, RSocketHttpBridgeProperties properties) {
-		super(requester, properties);
+	public RequestResponseFunction(RoutingRSocketRequesterBuilder requesterBuilder,
+			RoutingRSocketRequester defaultRequester, ObjectProvider<ClientTransportFactory> transportFactories,
+			RSocketHttpBridgeProperties properties) {
+		super(requesterBuilder, defaultRequester, transportFactories, properties);
 	}
 
 	@Override
@@ -34,9 +39,10 @@ public class RequestResponseFunction extends AbstractHttpRSocketFunction<Mono<Me
 					String route = resolveRoute(uri);
 					String serviceName = resolveAddress(uri);
 					String tagString = (String) message.getHeaders()
-							.get(properties.getTagHeaderName());
-					return requester
-							// TODO: handle different protocols
+							.get(properties.getTagsHeaderName());
+					String brokerHeader = (String) message.getHeaders()
+							.get(properties.getBrokerDataHeaderName());
+					return getRequester(brokerHeader)
 							.route(route)
 							.address(builder -> builder.with(SERVICE_NAME, serviceName)
 									.with(buildTags(tagString)))

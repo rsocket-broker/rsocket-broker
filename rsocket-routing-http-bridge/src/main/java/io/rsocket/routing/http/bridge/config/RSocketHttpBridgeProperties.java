@@ -16,7 +16,9 @@ public class RSocketHttpBridgeProperties {
 
 	private boolean requestResponseDefault = true;
 
-	private String tagHeaderName = "X-RSocket-Tags";
+	private String tagsHeaderName = "X-RSocket-Tags";
+
+	private String brokerDataHeaderName = "X-RSocket-Broker";
 
 	private Duration timeout = Duration.ofSeconds(30);
 
@@ -28,12 +30,20 @@ public class RSocketHttpBridgeProperties {
 		this.requestResponseDefault = requestResponseDefault;
 	}
 
-	public String getTagHeaderName() {
-		return tagHeaderName;
+	public String getTagsHeaderName() {
+		return tagsHeaderName;
 	}
 
-	public void setTagHeaderName(String tagHeaderName) {
-		this.tagHeaderName = tagHeaderName;
+	public void setTagsHeaderName(String tagsHeaderName) {
+		this.tagsHeaderName = tagsHeaderName;
+	}
+
+	public String getBrokerDataHeaderName() {
+		return brokerDataHeaderName;
+	}
+
+	public void setBrokerDataHeaderName(String brokerDataHeaderName) {
+		this.brokerDataHeaderName = brokerDataHeaderName;
 	}
 
 	public Duration getTimeout() {

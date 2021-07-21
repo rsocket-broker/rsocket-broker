@@ -5,7 +5,7 @@ dependencies {
     api 'org.springframework.boot:spring-boot-starter-webflux'
     api 'org.springframework.boot:spring-boot-starter-rsocket'
     implementation 'io.rsocket.routing:rsocket-routing-client-spring'
-    // FIXME: switch back to bom
+    // FIXME: switch back to bom when function 3.2.0 available
     implementation 'org.springframework.cloud:spring-cloud-function-web:3.2.0-SNAPSHOT'
     implementation 'org.springframework.cloud:spring-cloud-function-rsocket'
 
