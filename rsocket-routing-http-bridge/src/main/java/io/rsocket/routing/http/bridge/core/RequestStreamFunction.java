@@ -20,7 +20,7 @@ import static io.rsocket.routing.http.bridge.core.PathUtils.resolveRoute;
 /**
  * @author Olga Maciaszek-Sharma
  */
-public class RequestStreamFunction extends AbstractHttpRSocketFunction<Mono<Message<String>>, Flux<Message<String>>> {
+public class RequestStreamFunction extends AbstractHttpRSocketFunction<Mono<Message<Byte[]>>, Flux<Message<Byte[]>>> {
 
 	public RequestStreamFunction(RoutingRSocketRequesterBuilder requesterBuilder, RoutingRSocketRequester defaultRequester,
 			ObjectProvider<ClientTransportFactory> transportFactories, RSocketHttpBridgeProperties properties) {
@@ -28,7 +28,7 @@ public class RequestStreamFunction extends AbstractHttpRSocketFunction<Mono<Mess
 	}
 
 	@Override
-	public Flux<Message<String>> apply(Mono<Message<String>> messageMono) {
+	public Flux<Message<Byte[]>> apply(Mono<Message<Byte[]>> messageMono) {
 		return Flux.from(messageMono).flatMap(message -> {
 			String uriString = (String) message.getHeaders().get("uri");
 			if (uriString == null) {
@@ -47,7 +47,7 @@ public class RequestStreamFunction extends AbstractHttpRSocketFunction<Mono<Mess
 					.address(builder -> builder.with(SERVICE_NAME, serviceName)
 							.with(buildTags(tagString)))
 					.data(message.getPayload())
-					.retrieveFlux(new ParameterizedTypeReference<Message<String>>() {
+					.retrieveFlux(new ParameterizedTypeReference<Message<Byte[]>>() {
 					})
 					.timeout(timeout,
 							Flux.defer(() -> {

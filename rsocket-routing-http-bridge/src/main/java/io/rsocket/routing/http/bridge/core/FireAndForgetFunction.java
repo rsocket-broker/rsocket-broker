@@ -18,14 +18,14 @@ import static io.rsocket.routing.http.bridge.core.PathUtils.resolveRoute;
 /**
  * @author Olga Maciaszek-Sharma
  */
-public class FireAndForgetFunction extends AbstractHttpRSocketFunction<Mono<Message<String>>, Mono<Void>> {
+public class FireAndForgetFunction extends AbstractHttpRSocketFunction<Mono<Message<Byte[]>>, Mono<Void>> {
 
 	public FireAndForgetFunction(RoutingRSocketRequesterBuilder requesterBuilder, RoutingRSocketRequester defaultRequester, ObjectProvider<ClientTransportFactory> transportFactories, RSocketHttpBridgeProperties properties) {
 		super(requesterBuilder, defaultRequester, transportFactories, properties);
 	}
 
 	@Override
-	public Mono<Void> apply(Mono<Message<String>> messageMono) {
+	public Mono<Void> apply(Mono<Message<Byte[]>> messageMono) {
 		return messageMono.flatMap(message -> {
 			String uriString = (String) message.getHeaders().get("uri");
 			if (uriString == null) {

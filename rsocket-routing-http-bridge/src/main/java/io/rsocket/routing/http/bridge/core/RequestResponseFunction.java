@@ -19,7 +19,7 @@ import static io.rsocket.routing.http.bridge.core.PathUtils.resolveRoute;
 /**
  * @author Olga Maciaszek-Sharma
  */
-public class RequestResponseFunction extends AbstractHttpRSocketFunction<Mono<Message<String>>, Mono<Message<String>>> {
+public class RequestResponseFunction extends AbstractHttpRSocketFunction<Mono<Message<Byte[]>>, Mono<Message<Byte[]>>> {
 
 	public RequestResponseFunction(RoutingRSocketRequesterBuilder requesterBuilder,
 			RoutingRSocketRequester defaultRequester, ObjectProvider<ClientTransportFactory> transportFactories,
@@ -28,7 +28,7 @@ public class RequestResponseFunction extends AbstractHttpRSocketFunction<Mono<Me
 	}
 
 	@Override
-	public Mono<Message<String>> apply(Mono<Message<String>> messageMono) {
+	public Mono<Message<Byte[]>> apply(Mono<Message<Byte[]>> messageMono) {
 		return messageMono.flatMap(message -> {
 					String uriString = (String) message.getHeaders().get("uri");
 					if (uriString == null) {
@@ -47,7 +47,7 @@ public class RequestResponseFunction extends AbstractHttpRSocketFunction<Mono<Me
 							.address(builder -> builder.with(SERVICE_NAME, serviceName)
 									.with(buildTags(tagString)))
 							.data(message.getPayload())
-							.retrieveMono(new ParameterizedTypeReference<Message<String>>() {
+							.retrieveMono(new ParameterizedTypeReference<Message<Byte[]>>() {
 							})
 							.timeout(timeout,
 									Mono.defer(() -> {

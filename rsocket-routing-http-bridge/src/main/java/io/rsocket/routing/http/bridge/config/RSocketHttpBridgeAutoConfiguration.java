@@ -50,22 +50,22 @@ public class RSocketHttpBridgeAutoConfiguration implements ApplicationContextAwa
 	// Stay with four different endpoints or switch to some other way of differentiating?
 
 	@Bean
-	public Function<Mono<Message<String>>, Mono<Message<String>>> rr() {
+	public Function<Mono<Message<Byte[]>>, Mono<Message<Byte[]>>> rr() {
 		return new RequestResponseFunction(requesterBuilder, requester, transportFactories, properties);
 	}
 
 	@Bean
-	public Function<Flux<Message<String>>, Flux<Message<String>>> rc() {
+	public Function<Flux<Message<Byte[]>>, Flux<Message<Byte[]>>> rc() {
 		return new RequestChannelFunction(requesterBuilder, requester, transportFactories, properties);
 	}
 
 	@Bean
-	public Function<Mono<Message<String>>, Flux<Message<String>>> rs() {
+	public Function<Mono<Message<Byte[]>>, Flux<Message<Byte[]>>> rs() {
 		return new RequestStreamFunction(requesterBuilder, requester, transportFactories, properties);
 	}
 
 	@Bean
-	public Function<Mono<Message<String>>, Mono<Void>> ff() {
+	public Function<Mono<Message<Byte[]>>, Mono<Void>> ff() {
 		return new FireAndForgetFunction(requesterBuilder, requester, transportFactories, properties);
 	}
 
