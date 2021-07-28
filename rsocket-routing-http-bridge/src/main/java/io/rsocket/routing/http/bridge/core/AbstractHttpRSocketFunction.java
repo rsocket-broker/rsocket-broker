@@ -8,8 +8,6 @@ import java.util.function.Function;
 
 import io.rsocket.routing.client.spring.RoutingRSocketRequester;
 import io.rsocket.routing.client.spring.RoutingRSocketRequesterBuilder;
-import io.rsocket.routing.common.Key;
-import io.rsocket.routing.common.Tags;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
 import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties;
@@ -62,19 +60,6 @@ abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
 					.format("Exception occurred while retrieving RSocket response from address: %s, route: %s", address, route), error);
 	}
 
-	protected Tags buildTags(String tagString) {
-		Tags.Builder<?> tagsBuilder = Tags.builder();
-		if (tagString != null) {
-			String[] tagPairs = tagString.split(",");
-			Arrays.stream(tagPairs)
-					.map(pair -> Arrays.asList(pair.split("=")))
-					.filter(pair -> pair.size() == 2)
-					.forEach(pair -> tagsBuilder
-							.with(Key.of(pair.get(0)), pair.get(1)));
-		}
-		return tagsBuilder.buildTags();
-	}
-
 	protected RoutingRSocketRequester getRequester(String brokerHeader) {
 		if (brokerHeader != null) {
 			TransportProperties broker = buildBroker(brokerHeader);
@@ -102,13 +87,13 @@ abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
 				.forEach(pair -> brokerDataMap.put(pair.get(0), pair.get(1)));
 		String transport = brokerDataMap.get(TRANSPORT_KEY);
 		TransportProperties broker = new TransportProperties();
-		if (WEBSOCKET.name().equals(transport)) {
+		if (WEBSOCKET.name().equalsIgnoreCase(transport)) {
 			broker.setWebsocket(buildWebsocketBroker(brokerDataMap));
 			return broker;
 		}
 		broker.setTcp(buildTcpBroker(brokerDataMap));
 		return broker;
-		// TODO: handle custom?
+		// TODO: support custom?
 	}
 
 	private TransportProperties.TcpProperties buildTcpBroker(Map<String, String> brokerDataMap) {

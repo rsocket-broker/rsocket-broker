@@ -14,6 +14,7 @@ import org.springframework.messaging.Message;
 import static io.rsocket.routing.common.WellKnownKey.SERVICE_NAME;
 import static io.rsocket.routing.http.bridge.core.PathUtils.resolveAddress;
 import static io.rsocket.routing.http.bridge.core.PathUtils.resolveRoute;
+import static io.rsocket.routing.http.bridge.core.TagBuilder.buildTags;
 
 /**
  * @author Olga Maciaszek-Sharma
