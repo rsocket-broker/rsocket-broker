@@ -15,6 +15,7 @@ import reactor.core.publisher.Mono;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.function.context.FunctionProperties;
@@ -29,6 +30,7 @@ import org.springframework.messaging.Message;
  * @author Olga Maciaszek-Sharma
  */
 @Configuration(proxyBeanMethods = false)
+@ConditionalOnBean({RoutingRSocketRequester.class, RoutingRSocketRequesterBuilder.class})
 @ConditionalOnProperty(value = "spring.cloud.rsocket.routing.http.bridge.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(RSocketHttpBridgeProperties.class)
 public class RSocketHttpBridgeAutoConfiguration implements ApplicationContextAware, InitializingBean {
