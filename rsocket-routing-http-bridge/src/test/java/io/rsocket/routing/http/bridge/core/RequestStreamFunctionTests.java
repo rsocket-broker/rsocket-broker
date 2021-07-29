@@ -8,6 +8,7 @@ import io.rsocket.routing.http.bridge.support.SimpleClientTransportFactory;
 import io.rsocket.routing.http.bridge.support.SimpleObjectProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -21,16 +22,17 @@ import static org.mockito.Mockito.when;
 /**
  * @author Olga Maciaszek-Sharma
  */
-class RequestResponseFunctionTests extends AbstractFunctionTests {
+public class RequestStreamFunctionTests extends AbstractFunctionTests {
 
-	private RequestResponseFunction function;
+	private RequestStreamFunction function;
 
 	@BeforeEach
 	void setup() {
-		when(retrieveSpec.retrieveMono(any(ParameterizedTypeReference.class)))
-				.thenReturn(Mono.just(outputMessage));
+		when(retrieveSpec.retrieveFlux(any(ParameterizedTypeReference.class)))
+				.thenReturn(Flux.just(outputMessage));
 		super.setup();
-		function = new RequestResponseFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+		when(retrieveSpec.send()).thenReturn(Mono.empty());
+		function = new RequestStreamFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 				properties);
 	}
 
@@ -58,16 +60,15 @@ class RequestResponseFunctionTests extends AbstractFunctionTests {
 	void shouldTimeout() {
 		StepVerifier.withVirtualTime(() -> {
 			properties.setTimeout(Duration.ofMillis(1));
-			function = new RequestResponseFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+			function = new RequestStreamFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 					properties);
 			Map<String, Object> headers = new HashMap<>();
 			headers.put("uri", "http://test.org/testAddress/testRoute");
 			Message<Byte[]> inputMessage = new GenericMessage<>(buildPayload("input"), headers);
 			return function
 					.apply(Mono.just(inputMessage))
-					.delayElement(Duration.ofMillis(2));
+					.delaySequence(Duration.ofMillis(2));
 		}).expectSubscription()
 				.verifyTimeout(Duration.ofMillis(1));
 	}
-
 }

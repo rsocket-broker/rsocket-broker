@@ -13,6 +13,8 @@ import reactor.test.StepVerifier;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
 
+import static org.mockito.Mockito.when;
+
 /**
  * @author Olga Maciaszek-Sharma
  */
@@ -22,6 +24,7 @@ class FireAndForgetFunctionTests extends AbstractFunctionTests {
 
 	@BeforeEach
 	void setup() {
+		when(retrieveSpec.send()).thenReturn(Mono.empty());
 		super.setup();
 		function = new FireAndForgetFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 				properties);

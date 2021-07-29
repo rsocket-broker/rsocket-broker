@@ -8,6 +8,7 @@ import io.rsocket.routing.http.bridge.support.SimpleClientTransportFactory;
 import io.rsocket.routing.http.bridge.support.SimpleObjectProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -21,16 +22,16 @@ import static org.mockito.Mockito.when;
 /**
  * @author Olga Maciaszek-Sharma
  */
-class RequestResponseFunctionTests extends AbstractFunctionTests {
+public class RequestChannelFunctionTests extends AbstractFunctionTests {
 
-	private RequestResponseFunction function;
+	private RequestChannelFunction function;
 
 	@BeforeEach
 	void setup() {
-		when(retrieveSpec.retrieveMono(any(ParameterizedTypeReference.class)))
-				.thenReturn(Mono.just(outputMessage));
+		when(retrieveSpec.retrieveFlux(any(ParameterizedTypeReference.class)))
+				.thenReturn(Flux.just(outputMessage));
 		super.setup();
-		function = new RequestResponseFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+		function = new RequestChannelFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 				properties);
 	}
 
@@ -39,7 +40,7 @@ class RequestResponseFunctionTests extends AbstractFunctionTests {
 		Map<String, Object> headers = new HashMap<>();
 		headers.put("uri", "http://test.org/testAddress/testRoute");
 		Message<Byte[]> inputMessage = new GenericMessage<>(buildPayload("input"), headers);
-		StepVerifier.create(function.apply(Mono.just(inputMessage)))
+		StepVerifier.create(function.apply(Flux.just(inputMessage)))
 				.expectSubscription()
 				.expectNext(outputMessage)
 				.thenCancel()
@@ -49,7 +50,7 @@ class RequestResponseFunctionTests extends AbstractFunctionTests {
 	@Test
 	void shouldReturnErrorWhenNoUriHeader() {
 		Message<Byte[]> inputMessage = new GenericMessage<>(buildPayload("input"));
-		StepVerifier.create(function.apply(Mono.just(inputMessage)))
+		StepVerifier.create(function.apply(Flux.just(inputMessage)))
 				.expectError()
 				.verify(VERIFY_TIMEOUT);
 	}
@@ -58,16 +59,15 @@ class RequestResponseFunctionTests extends AbstractFunctionTests {
 	void shouldTimeout() {
 		StepVerifier.withVirtualTime(() -> {
 			properties.setTimeout(Duration.ofMillis(1));
-			function = new RequestResponseFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+			function = new RequestChannelFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 					properties);
 			Map<String, Object> headers = new HashMap<>();
 			headers.put("uri", "http://test.org/testAddress/testRoute");
 			Message<Byte[]> inputMessage = new GenericMessage<>(buildPayload("input"), headers);
 			return function
-					.apply(Mono.just(inputMessage))
-					.delayElement(Duration.ofMillis(2));
+					.apply(Flux.just(inputMessage))
+					.delaySequence(Duration.ofMillis(2));
 		}).expectSubscription()
 				.verifyTimeout(Duration.ofMillis(1));
 	}
-
 }

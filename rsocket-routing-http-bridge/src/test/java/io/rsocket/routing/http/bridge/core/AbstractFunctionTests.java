@@ -9,6 +9,7 @@ import io.rsocket.routing.client.spring.RoutingRSocketRequester;
 import io.rsocket.routing.client.spring.RoutingRSocketRequesterBuilder;
 import io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties;
 import org.junit.jupiter.api.BeforeEach;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.core.ParameterizedTypeReference;
@@ -39,10 +40,7 @@ abstract class AbstractFunctionTests {
 	void setup() {
 		when(builder.transport(any())).thenReturn(null);
 		when(requestSpec.address(any(Consumer.class))).thenReturn(requestSpec);
-		when(retrieveSpec.retrieveMono(any(ParameterizedTypeReference.class)))
-				.thenReturn(Mono.just(outputMessage));
-		when(retrieveSpec.send()).thenReturn(Mono.empty());
-		when(requestSpec.data(any(Byte[].class))).thenReturn(retrieveSpec);
+		when(requestSpec.data(any())).thenReturn(retrieveSpec);
 		when(defaultRequester.route(eq("testRoute"))).thenReturn(requestSpec);
 	}
 
