@@ -32,7 +32,7 @@ import static io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties.
 @ConfigurationProperties(BRIDGE_CONFIG_PREFIX)
 public class RSocketHttpBridgeProperties {
 
-	public static final String BRIDGE_CONFIG_PREFIX = "io.rsocket.routing.http.bridge";
+	public static final String BRIDGE_CONFIG_PREFIX = "io.rsocket.routing.http-bridge";
 
 	/**
 	 * Sets request-response to default interaction mode that the request resolves to
