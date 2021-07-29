@@ -33,7 +33,11 @@ import static io.rsocket.routing.http.bridge.core.PathUtils.resolveRoute;
 import static io.rsocket.routing.http.bridge.core.TagBuilder.buildTags;
 
 /**
+ * HTTP to RSocket Fire-and-Forget mode function. Requests with path starting with {@code ff}
+ * will be processed by this function.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 public class FireAndForgetFunction extends AbstractHttpRSocketFunction<Mono<Message<Byte[]>>, Mono<Void>> {
 

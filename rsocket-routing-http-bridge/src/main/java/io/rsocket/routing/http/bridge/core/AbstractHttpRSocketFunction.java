@@ -36,7 +36,10 @@ import static io.rsocket.routing.http.bridge.core.AbstractHttpRSocketFunction.Tr
 import static org.apache.commons.logging.LogFactory.getLog;
 
 /**
+ * Base class for HTTP-RSocket bridge functions.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
 
@@ -128,8 +131,11 @@ abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
 		return websocketBroker;
 	}
 
+	/**
+	 * Supported broker transport modes.
+	 */
 	enum Transport {
-		TCP, WEBSOCKET, CUSTOM
+		TCP, WEBSOCKET
 	}
 
 }

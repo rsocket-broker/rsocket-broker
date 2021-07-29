@@ -34,7 +34,11 @@ import static io.rsocket.routing.http.bridge.core.PathUtils.resolveRoute;
 import static io.rsocket.routing.http.bridge.core.TagBuilder.buildTags;
 
 /**
+ * HTTP to RSocket Request-Channel mode function. Requests with path starting with {@code rc}
+ * will be processed by this function.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 public class RequestChannelFunction extends AbstractHttpRSocketFunction<Flux<Message<Byte[]>>, Flux<Message<Byte[]>>> {
 

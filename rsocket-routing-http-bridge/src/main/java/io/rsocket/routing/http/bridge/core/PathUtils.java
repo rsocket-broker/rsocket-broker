@@ -29,7 +29,10 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.http.server.PathContainer;
 
 /**
+ * Utility class for parsing and validating path segments
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 class PathUtils {
 

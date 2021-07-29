@@ -43,7 +43,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 
 /**
+ * AutoConfiguration for HTTP Rsocket Bridge.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnBean({RoutingRSocketRequester.class, RoutingRSocketRequesterBuilder.class})

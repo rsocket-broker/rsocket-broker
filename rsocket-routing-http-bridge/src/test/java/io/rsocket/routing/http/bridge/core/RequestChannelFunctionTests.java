@@ -25,7 +25,6 @@ import io.rsocket.routing.http.bridge.support.SimpleObjectProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import org.springframework.core.ParameterizedTypeReference;
@@ -36,7 +35,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
+ * Tests for {@link RequestChannelFunction}.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 public class RequestChannelFunctionTests extends AbstractFunctionTests {
 

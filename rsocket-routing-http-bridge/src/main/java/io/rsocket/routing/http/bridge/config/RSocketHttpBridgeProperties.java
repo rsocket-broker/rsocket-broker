@@ -24,19 +24,35 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import static io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties.BRIDGE_CONFIG_PREFIX;
 
 /**
+ * Configuration properties for HTTP Rsocket brige.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 @ConfigurationProperties(BRIDGE_CONFIG_PREFIX)
 public class RSocketHttpBridgeProperties {
 
 	public static final String BRIDGE_CONFIG_PREFIX = "io.rsocket.routing.http.bridge";
 
+	/**
+	 * Sets request-response to default interaction mode that the request resolves to
+	 * if no interaction mode segment prefix is specified in the path.
+	 */
 	private boolean requestResponseDefault = true;
 
+	/**
+	 * Name of the routing tags header.
+	 */
 	private String tagsHeaderName = "X-RSocket-Tags";
 
+	/**
+	 * Name of the header containing broker config String.
+	 */
 	private String brokerDataHeaderName = "X-RSocket-Broker";
 
+	/**
+	 * Timeout used while processing RSocket requests.
+	 */
 	private Duration timeout = Duration.ofSeconds(30);
 
 	public boolean isRequestResponseDefault() {

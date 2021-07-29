@@ -34,7 +34,11 @@ import static io.rsocket.routing.http.bridge.core.PathUtils.resolveRoute;
 import static io.rsocket.routing.http.bridge.core.TagBuilder.buildTags;
 
 /**
+ * HTTP to RSocket Request-Response mode function. Requests with path starting with {@code rr}
+ * will be processed by this function.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 public class RequestResponseFunction extends AbstractHttpRSocketFunction<Mono<Message<Byte[]>>, Mono<Message<Byte[]>>> {
 

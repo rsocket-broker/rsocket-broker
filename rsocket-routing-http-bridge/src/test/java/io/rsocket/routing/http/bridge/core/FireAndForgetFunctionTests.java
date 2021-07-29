@@ -32,7 +32,10 @@ import org.springframework.messaging.support.GenericMessage;
 import static org.mockito.Mockito.when;
 
 /**
+ * Tests for {@link FireAndForgetFunction}.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 class FireAndForgetFunctionTests extends AbstractFunctionTests {
 

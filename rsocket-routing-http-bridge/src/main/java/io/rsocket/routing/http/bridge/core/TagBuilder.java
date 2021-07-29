@@ -22,7 +22,10 @@ import io.rsocket.routing.common.Key;
 import io.rsocket.routing.common.Tags;
 
 /**
+ * Utility class for processing routing tags.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 final class TagBuilder {
 

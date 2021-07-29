@@ -38,7 +38,10 @@ import static org.mockito.Mockito.when;
 
 
 /**
+ * Tests for {@link AbstractHttpRSocketFunction}.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 class AbstractHttpRSocketFunctionTests {
 

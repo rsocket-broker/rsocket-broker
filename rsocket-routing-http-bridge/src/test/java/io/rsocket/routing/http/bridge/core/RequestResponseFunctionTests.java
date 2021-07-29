@@ -35,7 +35,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
+ * Tests for {@link RequestResponseFunction}.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 class RequestResponseFunctionTests extends AbstractFunctionTests {
 

@@ -24,7 +24,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
+ * Tests for {@link TagBuilder}.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 class TagBuilderTests {
 

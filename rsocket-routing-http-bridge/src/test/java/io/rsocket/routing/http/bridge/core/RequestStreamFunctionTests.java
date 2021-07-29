@@ -36,7 +36,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
+ * Tests for {@link RequestStreamFunction}.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 public class RequestStreamFunctionTests extends AbstractFunctionTests {
 

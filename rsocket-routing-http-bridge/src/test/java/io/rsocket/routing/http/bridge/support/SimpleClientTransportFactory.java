@@ -21,7 +21,10 @@ import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.transport.ClientTransport;
 
 /**
+ * Test-specific implementation of {@link ClientTransportFactory}.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 public class SimpleClientTransportFactory implements ClientTransportFactory {
 

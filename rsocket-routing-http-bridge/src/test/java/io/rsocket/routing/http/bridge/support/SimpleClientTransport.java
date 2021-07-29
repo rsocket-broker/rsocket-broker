@@ -22,7 +22,10 @@ import io.rsocket.transport.ClientTransport;
 import reactor.core.publisher.Mono;
 
 /**
+ * Test-specific implementation of {@link ClientTransport}.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 public class SimpleClientTransport implements ClientTransport {
 

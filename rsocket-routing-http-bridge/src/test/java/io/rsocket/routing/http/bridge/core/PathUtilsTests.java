@@ -31,7 +31,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
+ * Tests for {@link PathUtils}.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 class PathUtilsTests {
 

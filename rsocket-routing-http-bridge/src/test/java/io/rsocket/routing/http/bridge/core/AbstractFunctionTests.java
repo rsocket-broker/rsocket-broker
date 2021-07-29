@@ -36,7 +36,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
+ * Base class for HTTP-RSocket function tests.
+ *
  * @author Olga Maciaszek-Sharma
+ * @since 0.3.0
  */
 abstract class AbstractFunctionTests {
 
