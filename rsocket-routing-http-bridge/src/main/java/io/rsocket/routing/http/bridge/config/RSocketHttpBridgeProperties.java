@@ -46,11 +46,6 @@ public class RSocketHttpBridgeProperties {
 	private String tagsHeaderName = "X-RSocket-Tags";
 
 	/**
-	 * Name of the header containing broker config String.
-	 */
-	private String brokerDataHeaderName = "X-RSocket-Broker";
-
-	/**
 	 * Timeout used while processing RSocket requests.
 	 */
 	private Duration timeout = Duration.ofSeconds(30);
@@ -69,14 +64,6 @@ public class RSocketHttpBridgeProperties {
 
 	public void setTagsHeaderName(String tagsHeaderName) {
 		this.tagsHeaderName = tagsHeaderName;
-	}
-
-	public String getBrokerDataHeaderName() {
-		return brokerDataHeaderName;
-	}
-
-	public void setBrokerDataHeaderName(String brokerDataHeaderName) {
-		this.brokerDataHeaderName = brokerDataHeaderName;
 	}
 
 	public Duration getTimeout() {

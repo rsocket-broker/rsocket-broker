@@ -23,11 +23,9 @@ import java.util.Map;
 import java.util.function.Function;
 
 import io.rsocket.routing.client.spring.RoutingRSocketRequester;
-import io.rsocket.routing.client.spring.RoutingRSocketRequesterBuilder;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
 import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties;
-import io.rsocket.transport.ClientTransport;
 import org.apache.commons.logging.Log;
 
 import org.springframework.beans.factory.ObjectProvider;
@@ -50,20 +48,17 @@ abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
 
 	protected final Log LOG = getLog(getClass());
 
-	protected RoutingRSocketRequester defaultRequester;
-	protected RoutingRSocketRequesterBuilder requesterBuilder;
+	protected RoutingRSocketRequester requester;
 	ObjectProvider<ClientTransportFactory> transportFactories;
 	protected final RSocketHttpBridgeProperties properties;
 	protected final Duration timeout;
 
-	protected AbstractHttpRSocketFunction(RoutingRSocketRequesterBuilder requesterBuilder,
-			RoutingRSocketRequester defaultRequester, ObjectProvider<ClientTransportFactory> transportFactories,
+	protected AbstractHttpRSocketFunction(RoutingRSocketRequester requester, ObjectProvider<ClientTransportFactory> transportFactories,
 			RSocketHttpBridgeProperties properties) {
-		this.requesterBuilder = requesterBuilder;
 		this.properties = properties;
 		timeout = properties.getTimeout();
 		this.transportFactories = transportFactories;
-		this.defaultRequester = defaultRequester;
+		this.requester = requester;
 	}
 
 	protected void logTimeout(String address, String route) {
@@ -77,24 +72,6 @@ abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
 		if (LOG.isErrorEnabled())
 			LOG.error(String
 					.format("Exception occurred while retrieving RSocket response from address: %s, route: %s", address, route), error);
-	}
-
-	protected RoutingRSocketRequester getRequester(String brokerHeader) {
-		if (brokerHeader != null) {
-			TransportProperties broker = buildBroker(brokerHeader);
-			ClientTransport clientTransport = transportFactories
-					.orderedStream()
-					.filter(factory -> factory.supports(broker))
-					.findFirst()
-					.map(factory -> factory.create(broker))
-					.orElseThrow(() -> new IllegalStateException("Unknown transport: " + broker));
-			RoutingRSocketRequester requesterForBroker = requesterBuilder
-					.transport(clientTransport);
-			// if we don't subscribe, there won't be a connection to the broker.
-			requesterForBroker.rsocketClient().source().subscribe();
-			return requesterForBroker;
-		}
-		return defaultRequester;
 	}
 
 	protected TransportProperties buildBroker(String brokerData) {

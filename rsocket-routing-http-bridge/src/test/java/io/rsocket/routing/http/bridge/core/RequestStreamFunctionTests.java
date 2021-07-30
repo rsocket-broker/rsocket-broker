@@ -51,7 +51,7 @@ public class RequestStreamFunctionTests extends AbstractFunctionTests {
 				.thenReturn(Flux.just(outputMessage));
 		super.setup();
 		when(retrieveSpec.send()).thenReturn(Mono.empty());
-		function = new RequestStreamFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+		function = new RequestStreamFunction(requester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 				properties);
 	}
 
@@ -79,7 +79,7 @@ public class RequestStreamFunctionTests extends AbstractFunctionTests {
 	void shouldTimeout() {
 		StepVerifier.withVirtualTime(() -> {
 			properties.setTimeout(Duration.ofMillis(1));
-			function = new RequestStreamFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+			function = new RequestStreamFunction(requester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 					properties);
 			Map<String, Object> headers = new HashMap<>();
 			headers.put("uri", "http://test.org/testAddress/testRoute");

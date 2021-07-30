@@ -49,7 +49,7 @@ public class RequestChannelFunctionTests extends AbstractFunctionTests {
 		when(retrieveSpec.retrieveFlux(any(ParameterizedTypeReference.class)))
 				.thenReturn(Flux.just(outputMessage));
 		super.setup();
-		function = new RequestChannelFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+		function = new RequestChannelFunction(requester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 				properties);
 	}
 
@@ -77,7 +77,7 @@ public class RequestChannelFunctionTests extends AbstractFunctionTests {
 	void shouldTimeout() {
 		StepVerifier.withVirtualTime(() -> {
 			properties.setTimeout(Duration.ofMillis(1));
-			function = new RequestChannelFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+			function = new RequestChannelFunction(requester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 					properties);
 			Map<String, Object> headers = new HashMap<>();
 			headers.put("uri", "http://test.org/testAddress/testRoute");

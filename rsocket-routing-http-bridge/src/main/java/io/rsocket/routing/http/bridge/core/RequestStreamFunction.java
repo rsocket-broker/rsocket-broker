@@ -19,7 +19,6 @@ package io.rsocket.routing.http.bridge.core;
 import java.net.URI;
 
 import io.rsocket.routing.client.spring.RoutingRSocketRequester;
-import io.rsocket.routing.client.spring.RoutingRSocketRequesterBuilder;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
 import io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties;
 import reactor.core.publisher.Flux;
@@ -43,9 +42,9 @@ import static io.rsocket.routing.http.bridge.core.TagBuilder.buildTags;
  */
 public class RequestStreamFunction extends AbstractHttpRSocketFunction<Mono<Message<Byte[]>>, Flux<Message<Byte[]>>> {
 
-	public RequestStreamFunction(RoutingRSocketRequesterBuilder requesterBuilder, RoutingRSocketRequester defaultRequester,
+	public RequestStreamFunction(RoutingRSocketRequester requester,
 			ObjectProvider<ClientTransportFactory> transportFactories, RSocketHttpBridgeProperties properties) {
-		super(requesterBuilder, defaultRequester, transportFactories, properties);
+		super(requester, transportFactories, properties);
 	}
 
 	@Override
@@ -61,9 +60,7 @@ public class RequestStreamFunction extends AbstractHttpRSocketFunction<Mono<Mess
 			String serviceName = resolveAddress(uri);
 			String tagString = (String) message.getHeaders()
 					.get(properties.getTagsHeaderName());
-			String brokerHeader = (String) message.getHeaders()
-					.get(properties.getBrokerDataHeaderName());
-			return getRequester(brokerHeader)
+			return requester
 					.route(route)
 					.address(builder -> builder.with(SERVICE_NAME, serviceName)
 							.with(buildTags(tagString)))

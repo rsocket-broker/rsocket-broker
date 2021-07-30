@@ -45,7 +45,7 @@ class FireAndForgetFunctionTests extends AbstractFunctionTests {
 	void setup() {
 		when(retrieveSpec.send()).thenReturn(Mono.empty());
 		super.setup();
-		function = new FireAndForgetFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+		function = new FireAndForgetFunction(requester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 				properties);
 	}
 

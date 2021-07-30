@@ -41,8 +41,8 @@ import static io.rsocket.routing.http.bridge.core.TagBuilder.buildTags;
  */
 public class FireAndForgetFunction extends AbstractHttpRSocketFunction<Mono<Message<Byte[]>>, Mono<Void>> {
 
-	public FireAndForgetFunction(RoutingRSocketRequesterBuilder requesterBuilder, RoutingRSocketRequester defaultRequester, ObjectProvider<ClientTransportFactory> transportFactories, RSocketHttpBridgeProperties properties) {
-		super(requesterBuilder, defaultRequester, transportFactories, properties);
+	public FireAndForgetFunction(RoutingRSocketRequester requester, ObjectProvider<ClientTransportFactory> transportFactories, RSocketHttpBridgeProperties properties) {
+		super(requester, transportFactories, properties);
 	}
 
 	@Override
@@ -58,9 +58,7 @@ public class FireAndForgetFunction extends AbstractHttpRSocketFunction<Mono<Mess
 			String serviceName = resolveAddress(uri);
 			String tagString = (String) message.getHeaders()
 					.get(properties.getTagsHeaderName());
-			String brokerHeader = (String) message.getHeaders()
-					.get(properties.getBrokerDataHeaderName());
-			return getRequester(brokerHeader)
+			return requester
 					.route(route)
 					.address(builder -> builder.with(SERVICE_NAME, serviceName)
 							.with(buildTags(tagString)))

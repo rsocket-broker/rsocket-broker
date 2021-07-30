@@ -56,15 +56,13 @@ public class RSocketHttpBridgeAutoConfiguration implements ApplicationContextAwa
 
 	private final RoutingRSocketRequester requester;
 	private final RSocketHttpBridgeProperties properties;
-	private final RoutingRSocketRequesterBuilder requesterBuilder;
 	private final ObjectProvider<ClientTransportFactory> transportFactories;
 	private ConfigurableApplicationContext applicationContext;
 
-	public RSocketHttpBridgeAutoConfiguration(RoutingRSocketRequester requester, RSocketHttpBridgeProperties properties, RoutingRSocketRequesterBuilder requesterBuilder,
+	public RSocketHttpBridgeAutoConfiguration(RoutingRSocketRequester requester, RSocketHttpBridgeProperties properties,
 			ObjectProvider<ClientTransportFactory> transportFactories) {
 		this.requester = requester;
 		this.properties = properties;
-		this.requesterBuilder = requesterBuilder;
 		this.transportFactories = transportFactories;
 	}
 
@@ -72,22 +70,22 @@ public class RSocketHttpBridgeAutoConfiguration implements ApplicationContextAwa
 
 	@Bean
 	public Function<Mono<Message<Byte[]>>, Mono<Message<Byte[]>>> rr() {
-		return new RequestResponseFunction(requesterBuilder, requester, transportFactories, properties);
+		return new RequestResponseFunction(requester, transportFactories, properties);
 	}
 
 	@Bean
 	public Function<Flux<Message<Byte[]>>, Flux<Message<Byte[]>>> rc() {
-		return new RequestChannelFunction(requesterBuilder, requester, transportFactories, properties);
+		return new RequestChannelFunction(requester, transportFactories, properties);
 	}
 
 	@Bean
 	public Function<Mono<Message<Byte[]>>, Flux<Message<Byte[]>>> rs() {
-		return new RequestStreamFunction(requesterBuilder, requester, transportFactories, properties);
+		return new RequestStreamFunction(requester, transportFactories, properties);
 	}
 
 	@Bean
 	public Function<Mono<Message<Byte[]>>, Mono<Void>> ff() {
-		return new FireAndForgetFunction(requesterBuilder, requester, transportFactories, properties);
+		return new FireAndForgetFunction(requester, transportFactories, properties);
 	}
 
 	@Override

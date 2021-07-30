@@ -22,7 +22,6 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 
 import io.rsocket.routing.client.spring.RoutingRSocketRequester;
-import io.rsocket.routing.client.spring.RoutingRSocketRequesterBuilder;
 import io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -45,8 +44,7 @@ abstract class AbstractFunctionTests {
 
 	static final Duration VERIFY_TIMEOUT = Duration.ofMillis(100);
 
-	protected RoutingRSocketRequesterBuilder builder = mock(RoutingRSocketRequesterBuilder.class);
-	protected RoutingRSocketRequester defaultRequester = mock(RoutingRSocketRequester.class);
+	protected RoutingRSocketRequester requester = mock(RoutingRSocketRequester.class);
 	protected RoutingRSocketRequester.RoutingRequestSpec requestSpec = mock(RoutingRSocketRequester.RoutingRequestSpec.class);
 	protected RSocketRequester.RetrieveSpec retrieveSpec = mock(RSocketRequester.RetrieveSpec.class);
 	protected Message<Byte[]> outputMessage = new GenericMessage<>(buildPayload("output"));
@@ -54,10 +52,9 @@ abstract class AbstractFunctionTests {
 
 	@BeforeEach
 	void setup() {
-		when(builder.transport(any())).thenReturn(null);
 		when(requestSpec.address(any(Consumer.class))).thenReturn(requestSpec);
 		when(requestSpec.data(any())).thenReturn(retrieveSpec);
-		when(defaultRequester.route(eq("testRoute"))).thenReturn(requestSpec);
+		when(requester.route(eq("testRoute"))).thenReturn(requestSpec);
 	}
 
 	protected Byte[] buildPayload(String payloadString) {

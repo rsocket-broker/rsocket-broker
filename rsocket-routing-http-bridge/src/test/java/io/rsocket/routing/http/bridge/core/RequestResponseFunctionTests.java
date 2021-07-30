@@ -49,7 +49,7 @@ class RequestResponseFunctionTests extends AbstractFunctionTests {
 		when(retrieveSpec.retrieveMono(any(ParameterizedTypeReference.class)))
 				.thenReturn(Mono.just(outputMessage));
 		super.setup();
-		function = new RequestResponseFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+		function = new RequestResponseFunction(requester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 				properties);
 	}
 
@@ -77,7 +77,7 @@ class RequestResponseFunctionTests extends AbstractFunctionTests {
 	void shouldTimeout() {
 		StepVerifier.withVirtualTime(() -> {
 			properties.setTimeout(Duration.ofMillis(1));
-			function = new RequestResponseFunction(builder, defaultRequester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
+			function = new RequestResponseFunction(requester, new SimpleObjectProvider<>(new SimpleClientTransportFactory()),
 					properties);
 			Map<String, Object> headers = new HashMap<>();
 			headers.put("uri", "http://test.org/testAddress/testRoute");
