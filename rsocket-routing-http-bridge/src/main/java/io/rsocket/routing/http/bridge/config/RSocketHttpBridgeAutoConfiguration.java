@@ -95,6 +95,7 @@ public class RSocketHttpBridgeAutoConfiguration implements ApplicationContextAwa
 		this.applicationContext = (ConfigurableApplicationContext) applicationContext;
 	}
 
+	// Setting the default Spring Cloud Function function definition.
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		FunctionProperties functionProperties = applicationContext
