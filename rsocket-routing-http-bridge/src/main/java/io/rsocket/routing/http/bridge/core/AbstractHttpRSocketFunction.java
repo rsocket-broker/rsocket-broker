@@ -17,20 +17,15 @@
 package io.rsocket.routing.http.bridge.core;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 
 import io.rsocket.routing.client.spring.RoutingRSocketRequester;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
-import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.http.bridge.config.RSocketHttpBridgeProperties;
 import org.apache.commons.logging.Log;
 
 import org.springframework.beans.factory.ObjectProvider;
 
-import static io.rsocket.routing.http.bridge.core.AbstractHttpRSocketFunction.Transport.WEBSOCKET;
 import static org.apache.commons.logging.LogFactory.getLog;
 
 /**
@@ -40,11 +35,6 @@ import static org.apache.commons.logging.LogFactory.getLog;
  * @since 0.3.0
  */
 abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
-
-	public static final String TRANSPORT_KEY = "transport";
-	public static final String PORT_KEY = "port";
-	public static final String HOST_KEY = "host";
-	public static final String MAPPING_PATH_KEY = "mapping-path";
 
 	protected final Log LOG = getLog(getClass());
 
@@ -72,47 +62,6 @@ abstract class AbstractHttpRSocketFunction<I, O> implements Function<I, O> {
 		if (LOG.isErrorEnabled())
 			LOG.error(String
 					.format("Exception occurred while retrieving RSocket response from address: %s, route: %s", address, route), error);
-	}
-
-	protected TransportProperties buildBroker(String brokerData) {
-		String[] brokerDataPair = brokerData.toLowerCase().split(",");
-		Map<String, String> brokerDataMap = new HashMap<>();
-		Arrays.stream(brokerDataPair)
-				.map(pair -> Arrays.asList(pair.split("=")))
-				.filter(pair -> pair.size() == 2)
-				.forEach(pair -> brokerDataMap.put(pair.get(0), pair.get(1)));
-		String transport = brokerDataMap.get(TRANSPORT_KEY);
-		TransportProperties broker = new TransportProperties();
-		if (WEBSOCKET.name().equalsIgnoreCase(transport)) {
-			broker.setWebsocket(buildWebsocketBroker(brokerDataMap));
-			return broker;
-		}
-		broker.setTcp(buildTcpBroker(brokerDataMap));
-		return broker;
-		// TODO: support custom?
-	}
-
-	private TransportProperties.TcpProperties buildTcpBroker(Map<String, String> brokerDataMap) {
-		TransportProperties.TcpProperties tcpBroker = new TransportProperties.TcpProperties();
-		tcpBroker.setHost(brokerDataMap.get(HOST_KEY));
-		tcpBroker.setPort(Integer.valueOf(brokerDataMap.getOrDefault(PORT_KEY, "0")));
-		return tcpBroker;
-	}
-
-	private TransportProperties.WebsocketProperties buildWebsocketBroker(Map<String, String> brokerDataMap) {
-		TransportProperties.WebsocketProperties websocketBroker = new TransportProperties.WebsocketProperties();
-		websocketBroker.setHost(brokerDataMap.get(HOST_KEY));
-		websocketBroker
-				.setPort(Integer.valueOf(brokerDataMap.getOrDefault(PORT_KEY, "0")));
-		websocketBroker.setMappingPath(brokerDataMap.get(MAPPING_PATH_KEY));
-		return websocketBroker;
-	}
-
-	/**
-	 * Supported broker transport modes.
-	 */
-	enum Transport {
-		TCP, WEBSOCKET
 	}
 
 }
