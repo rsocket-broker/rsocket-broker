@@ -17,9 +17,11 @@
 package io.rsocket.routing.http.bridge.core;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 import io.rsocket.routing.common.Key;
 import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.common.WellKnownKey;
 
 /**
  * Utility class for processing routing tags.
@@ -40,8 +42,23 @@ final class TagBuilder {
 			Arrays.stream(tagPairs)
 					.map(pair -> Arrays.asList(pair.split("=")))
 					.filter(pair -> pair.size() == 2)
-					.forEach(pair -> tagsBuilder
-							.with(Key.of(pair.get(0)), pair.get(1)));
+					.forEach(pair -> {
+						String key = pair.get(0);
+						String value = pair.get(1);
+						Optional<String> resolvedKey = Arrays
+								.stream(WellKnownKey.values()).map(Enum::name)
+								.filter(name -> name.equals(key.toUpperCase()))
+								.findAny();
+						if (resolvedKey.isPresent()) {
+							tagsBuilder
+									.with(WellKnownKey.valueOf(resolvedKey.get()), value);
+						}
+						else {
+							tagsBuilder
+									.with(Key.of(key), value);
+						}
+
+					});
 		}
 		return tagsBuilder.buildTags();
 	}
