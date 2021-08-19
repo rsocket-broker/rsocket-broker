@@ -17,6 +17,7 @@
 package io.rsocket.routing.http.bridge.core;
 
 import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.common.WellKnownKey;
 import org.junit.jupiter.api.Test;
 
 import static io.rsocket.routing.http.bridge.core.TagBuilder.buildTags;
@@ -67,5 +68,15 @@ class TagBuilderTests {
 
 		assertThatCode(() -> buildTags(tagString))
 				.doesNotThrowAnyException();
+	}
+
+	@Test
+	void shouldUseWellKnownKeysIfResolved(){
+		String tagString = "INSTANCE_NAME=test-instance";
+
+		Tags tags = buildTags(tagString);
+
+		assertThat(tags.asMap()).hasSize(1);
+		assertThat(tags.get(WellKnownKey.INSTANCE_NAME)).isEqualTo("test-instance");
 	}
 }
