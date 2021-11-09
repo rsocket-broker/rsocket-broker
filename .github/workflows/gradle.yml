@@ -29,7 +29,16 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
+      run: ./gradlew -PversionSuffix="-SNAPSHOT" -PbuildNumber="${buildNumber}" build publishMavenPublicationToGitHubPackagesRepository --no-daemon --stacktrace
       env:
-        BINTRAY_USER: ${{ secrets.bintrayUser }}
-        BINTRAY_KEY: ${{ secrets.bintrayKey }}
-      run: ./gradlew build artifactoryPublish -Dbuild.number=$GITHUB_RUN_ID
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        buildNumber: ${{ github.run_number }}
+    - name: Aggregate test reports with ciMate
+      if: always()
+      continue-on-error: true
+      env:
+        CIMATE_PROJECT_ID: m84qx17y
+      run: |
+        wget -q https://get.cimate.io/release/linux/cimate
+        chmod +x cimate
+        ./cimate "**/TEST-*.xml"

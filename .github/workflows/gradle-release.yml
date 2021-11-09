@@ -30,11 +30,13 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
-      run: ./gradlew clean build
-    - name: Publish Packages to Bintray
+      run: ./gradlew clean build -x test
+    - name: Publish Packages to Sonotype
+      run: ./gradlew -Pversion="${githubRef#refs/tags/}" -PbuildNumber="${buildNumber}" sign publishMavenPublicationToSonatypeRepository
       env:
-        BINTRAY_USER: ${{ secrets.bintrayUser }}
-        BINTRAY_KEY: ${{ secrets.bintrayKey }}
-        SONATYPE_USERNAME: ${{ secrets.sonatypeUsername }}
-        SONATYPE_PASSWORD: ${{ secrets.sonatypePassword }}
-      run: ./gradlew -Pversion="${GITHUB_REF#refs/tags/}" -PbuildNumber="${GITHUB_RUN_ID}" bintrayUpload
+        githubRef: ${{ github.ref }}
+        buildNumber: ${{ github.run_number }}
+        ORG_GRADLE_PROJECT_signingKey: ${{secrets.signingKey}}
+        ORG_GRADLE_PROJECT_signingPassword: ${{secrets.signingPassword}}
+        ORG_GRADLE_PROJECT_sonatypeUsername: ${{secrets.sonatypeUsername}}
+        ORG_GRADLE_PROJECT_sonatypePassword: ${{secrets.sonatypePassword}}
