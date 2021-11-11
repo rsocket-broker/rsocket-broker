@@ -16,8 +16,9 @@
 
 package io.rsocket.routing.broker.spring;
 
+import java.net.URI;
+
 import io.rsocket.routing.common.Id;
-import io.rsocket.routing.common.spring.TransportProperties.TcpProperties;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +31,7 @@ import org.springframework.context.annotation.Bean;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(properties = {"io.rsocket.routing.broker.broker-id=00000000-0000-0000-0000-000000000007",
-		"io.rsocket.routing.broker.brokers[0].cluster.tcp.host=myhost",
-		"io.rsocket.routing.broker.brokers[0].cluster.tcp.port=99"})
+		"io.rsocket.routing.broker.brokers[0].cluster=tcp://myhost:99"})
 public class BrokerPropertiesTests {
 
 	@Autowired
@@ -45,9 +45,8 @@ public class BrokerPropertiesTests {
 	@Test
 	public void tcpPropertiesAreSet() {
 		assertThat(properties.getBrokers()).hasSize(1);
-		TcpProperties tcp = properties.getBrokers().get(0).getCluster().getTcp();
-		assertThat(tcp.getHost()).isEqualTo("myhost");
-		assertThat(tcp.getPort()).isEqualTo(99);
+		URI uri = properties.getBrokers().get(0).getCluster();
+		assertThat(uri).hasScheme("tcp").hasHost("myhost").hasPort(99);
 	}
 
 	@SpringBootConfiguration

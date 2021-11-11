@@ -25,10 +25,9 @@ import io.rsocket.RSocket;
 import io.rsocket.routing.frames.BrokerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 /**
  * Maintains map of BrokerInfo to T of existing broker connections to current broker.
@@ -37,10 +36,8 @@ import reactor.core.publisher.Mono;
 public abstract class AbstractConnections<T> {
 	protected final Logger logger = LoggerFactory.getLogger(getClass());
 
-	protected final FluxProcessor<BrokerInfo, BrokerInfo> joinEvents =
-			DirectProcessor.<BrokerInfo>create().serialize();
-	protected final FluxProcessor<BrokerInfo, BrokerInfo> leaveEvents =
-			DirectProcessor.<BrokerInfo>create().serialize();
+	protected final Sinks.Many<BrokerInfo> joinEvents = Sinks.many().multicast().directBestEffort();
+	protected final Sinks.Many<BrokerInfo> leaveEvents = Sinks.many().multicast().directBestEffort();
 
 	protected final Map<BrokerInfo, T> connections = new ConcurrentHashMap<>();
 
@@ -59,14 +56,14 @@ public abstract class AbstractConnections<T> {
 	public T put(BrokerInfo brokerInfo, T connection) {
 		logger.debug("adding {} RSocket {}", brokerInfo, connection);
 		T old = connections.put(brokerInfo, connection);
-		joinEvents.onNext(brokerInfo);
+		joinEvents.tryEmitNext(brokerInfo);
 		registerCleanup(brokerInfo, connection);
 		return old;
 	}
 
 	public T remove(BrokerInfo brokerInfo) {
 		T removed = connections.remove(brokerInfo);
-		leaveEvents.onNext(brokerInfo);
+		leaveEvents.tryEmitNext(brokerInfo);
 		return removed;
 	}
 
@@ -77,18 +74,18 @@ public abstract class AbstractConnections<T> {
 			// cleanup everything related to this connection
 			logger.debug("removing connection {}", brokerInfo);
 			connections.remove(brokerInfo);
-			leaveEvents.onNext(brokerInfo);
+			leaveEvents.tryEmitNext(brokerInfo);
 
 			// TODO: remove routes for broker
 		})).subscribe();
 	}
 
 	public Flux<BrokerInfo> joinEvents() {
-		return joinEvents.filter(brokerInfo -> true);
+		return joinEvents.asFlux().filter(brokerInfo -> true);
 	}
 
 	public Flux<BrokerInfo> leaveEvents() {
-		return leaveEvents.filter(brokerInfo -> true);
+		return leaveEvents.asFlux().filter(brokerInfo -> true);
 	}
 
 }

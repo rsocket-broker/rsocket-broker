@@ -16,21 +16,25 @@
 
 package io.rsocket.routing.broker.spring;
 
+import java.net.URI;
 import java.util.StringJoiner;
 
-import io.rsocket.routing.common.spring.TransportProperties;
+public class ClusterBrokerProperties {
 
-public class ClusterBrokerProperties extends TransportProperties {
+	private URI uri = URI.create("tcp://localhost:7001");
 
-	public ClusterBrokerProperties() {
-		getTcp().setPort(7001);
+	public URI getUri() {
+		return this.uri;
+	}
+
+	public void setUri(URI uri) {
+		this.uri = uri;
 	}
 
 	@Override
 	public String toString() {
 		return new StringJoiner(", ", ClusterBrokerProperties.class.getSimpleName() + "[", "]")
-				.add("tcp=" + getTcp())
-				.add("websocket=" + getWebsocket())
+				.add("uri=" + uri)
 				.toString();
 	}
 }

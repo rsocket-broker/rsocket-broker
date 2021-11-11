@@ -1,15 +1,10 @@
 io.rsocket.routing.broker:
-  tcp.port: 8012
-  cluster.tcp.port: 7012
+  uri: tcp://localhost:8012
+  cluster.uri: tcp://localhost:7012
   broker-id: 00000000-0000-0000-0000-000000000012
   brokers:
-    - cluster.tcp:
-        host: localhost
-        port: 7011
-      proxy.tcp:
-        host: localhost
-        port: 8011
-
+    - cluster: tcp://localhost:7011
+      proxy: tcp://localhost:8011
 
 logging.level:
   io.rsocket.routing.broker: DEBUG

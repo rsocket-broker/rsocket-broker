@@ -16,6 +16,7 @@
 
 package io.rsocket.routing.broker.spring;
 
+import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.stream.Collectors;
@@ -32,14 +33,14 @@ import io.rsocket.routing.broker.RSocketIndex;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.acceptor.BrokerSocketAcceptor;
 import io.rsocket.routing.broker.acceptor.ClusterSocketAcceptor;
-import io.rsocket.routing.broker.rsocket.CompositeRSocketLocator;
-import io.rsocket.routing.broker.rsocket.RSocketLocator;
-import io.rsocket.routing.broker.rsocket.UnicastRSocketLocator;
-import io.rsocket.routing.broker.rsocket.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.query.CombinedRSocketQuery;
 import io.rsocket.routing.broker.query.RSocketQuery;
+import io.rsocket.routing.broker.rsocket.CompositeRSocketLocator;
 import io.rsocket.routing.broker.rsocket.MulticastRSocketLocator;
+import io.rsocket.routing.broker.rsocket.RSocketLocator;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
+import io.rsocket.routing.broker.rsocket.UnicastRSocketLocator;
+import io.rsocket.routing.broker.rsocket.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.spring.cluster.BrokerConnections;
 import io.rsocket.routing.broker.spring.cluster.ClusterController;
 import io.rsocket.routing.broker.spring.cluster.ClusterJoinListener;
@@ -49,7 +50,6 @@ import io.rsocket.routing.broker.spring.cluster.RouteJoinListener;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
 import io.rsocket.routing.common.spring.DefaultClientTransportFactory;
 import io.rsocket.routing.common.spring.MimeTypes;
-import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.frames.RoutingFrame;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -228,17 +228,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 				.metadataExtractor(), proxyConnections);
 	}
 
-	private static String findTransportName(TransportProperties properties) {
-		if (properties.hasCustomTransport()) {
-			return properties.getCustom().getType();
-		}
-		else if (properties.getWebsocket() != null) {
-			return "websocket";
-		}
-		else if (properties.getTcp() != null) {
-			return "tcp";
-		}
-		throw new IllegalStateException("Unknown Transport " + properties);
+	private static String findTransportName(URI uri) {
+		return uri.getScheme();
 	}
 
 	@Configuration
@@ -285,8 +276,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 				ClusterBrokerProperties properties,
 				ObjectProvider<ServerTransportFactory> transportFactories,
 				ClusterSocketAcceptor clusterSocketAcceptor) {
-			RSocketServerFactory serverFactory = findRSocketServerFactory(properties, transportFactories);
-			return new BrokerRSocketServerBootstrap("cluster", findTransportName(properties), serverFactory, clusterSocketAcceptor);
+			RSocketServerFactory serverFactory = findRSocketServerFactory(properties.getUri(), transportFactories);
+			return new BrokerRSocketServerBootstrap("cluster", findTransportName(properties.getUri()), serverFactory, clusterSocketAcceptor);
 		}
 	}
 
@@ -301,14 +292,14 @@ public class BrokerAutoConfiguration implements InitializingBean {
 			BrokerProperties properties,
 			ObjectProvider<ServerTransportFactory> transportFactories,
 			BrokerSocketAcceptor brokerSocketAcceptor) {
-		RSocketServerFactory serverFactory = findRSocketServerFactory(properties, transportFactories);
-		return new BrokerRSocketServerBootstrap("broker", findTransportName(properties), serverFactory, brokerSocketAcceptor);
+		RSocketServerFactory serverFactory = findRSocketServerFactory(properties.getUri(), transportFactories);
+		return new BrokerRSocketServerBootstrap("broker", findTransportName(properties.getUri()), serverFactory, brokerSocketAcceptor);
 	}
 
-	private static RSocketServerFactory findRSocketServerFactory(TransportProperties properties, ObjectProvider<ServerTransportFactory> factories) {
-		return factories.orderedStream().filter(factory -> factory.supports(properties)).findFirst()
-				.map(factory -> factory.create(properties))
-				.orElseThrow(() -> new IllegalArgumentException("Unknown transport " + properties));
+	private static RSocketServerFactory findRSocketServerFactory(URI uri, ObjectProvider<ServerTransportFactory> factories) {
+		return factories.orderedStream().filter(factory -> factory.supports(uri)).findFirst()
+				.map(factory -> factory.create(uri))
+				.orElseThrow(() -> new IllegalArgumentException("Unknown transport " + uri));
 	}
 
 	/* for testing */ static class BrokerRSocketServerBootstrap extends RSocketServerBootstrap {

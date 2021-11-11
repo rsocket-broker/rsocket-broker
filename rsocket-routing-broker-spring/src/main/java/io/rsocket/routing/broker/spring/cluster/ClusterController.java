@@ -27,9 +27,8 @@ import io.rsocket.routing.frames.RouteJoin;
 import io.rsocket.routing.frames.RoutingFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.DirectProcessor;
-import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.rsocket.RSocketRequester;
@@ -47,8 +46,7 @@ public class ClusterController {
 	private final BrokerConnections brokerConnections;
 	private final RoutingTable routingTable;
 
-	private final FluxProcessor<BrokerInfo, BrokerInfo> connectEvents =
-			DirectProcessor.<BrokerInfo>create().serialize();
+	private final Sinks.Many<BrokerInfo> connectEvents = Sinks.many().multicast().directBestEffort();
 
 	public ClusterController(BrokerProperties properties, BrokerConnections brokerConnections, RoutingTable routingTable) {
 		this.properties = properties;
@@ -59,7 +57,7 @@ public class ClusterController {
 		// This allows broker to maintain a single connection, but allows other broker
 		// to call brokerInfo() to get this broker's id and add it to BrokerConnections.
 		// TODO: configurable delay
-		connectEvents.delayElements(Duration.ofSeconds(1))
+		connectEvents.asFlux().delayElements(Duration.ofSeconds(1))
 				.flatMap(brokerInfo -> {
 					RSocketRequester requester = brokerConnections.get(brokerInfo);
 					return sendBrokerInfo(requester, brokerInfo);
@@ -88,7 +86,7 @@ public class ClusterController {
 		brokerConnections.put(brokerInfo, rSocketRequester);
 
 		// send a connectEvent
-		connectEvents.onNext(brokerInfo);
+		connectEvents.tryEmitNext(brokerInfo);
 		return Mono.empty();
 	}
 
@@ -110,6 +108,8 @@ public class ClusterController {
 		// send BrokerInfo back
 		return sendBrokerInfo(rSocketRequester, brokerInfo);
 	}
+
+	//TODO: @MessageMapping("cluster.broker-info")
 
 	private Mono<BrokerInfo> sendBrokerInfo(RSocketRequester rSocketRequester, BrokerInfo brokerInfo) {
 		BrokerInfo localBrokerInfo = BrokerInfo.from(properties.getBrokerId()).build();

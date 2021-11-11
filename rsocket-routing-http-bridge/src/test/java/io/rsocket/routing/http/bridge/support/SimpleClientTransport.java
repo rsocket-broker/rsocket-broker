@@ -16,8 +16,9 @@
 
 package io.rsocket.routing.http.bridge.support;
 
+import java.net.URI;
+
 import io.rsocket.DuplexConnection;
-import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.transport.ClientTransport;
 import reactor.core.publisher.Mono;
 
@@ -29,10 +30,10 @@ import reactor.core.publisher.Mono;
  */
 public class SimpleClientTransport implements ClientTransport {
 
-	private final TransportProperties broker;
+	private final URI brokerUri;
 
-	public SimpleClientTransport(TransportProperties broker) {
-		this.broker = broker;
+	public SimpleClientTransport(URI brokerUri) {
+		this.brokerUri = brokerUri;
 	}
 
 
@@ -41,7 +42,7 @@ public class SimpleClientTransport implements ClientTransport {
 		return Mono.empty();
 	}
 
-	public TransportProperties getBroker() {
-		return broker;
+	public URI getBrokerURI() {
+		return brokerUri;
 	}
 }

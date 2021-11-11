@@ -17,12 +17,12 @@
 package io.rsocket.routing.broker.spring;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 
 import io.rsocket.Closeable;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.routing.broker.spring.BrokerAutoConfiguration.BrokerRSocketServerBootstrap;
 import io.rsocket.routing.common.Id;
-import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.transport.local.LocalServerTransport;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
@@ -40,13 +40,10 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.entry;
 
 @SpringBootTest(properties = {"io.rsocket.routing.broker.broker-id=00000000-0000-0000-0000-000000000008",
-		"io.rsocket.routing.broker.custom.type=local",
-		"io.rsocket.routing.broker.custom.args.name=mylocal",
-		"io.rsocket.routing.broker.cluster.custom.type=local",
-		"io.rsocket.routing.broker.cluster.custom.args.name=myclusterlocal"})
+		"io.rsocket.routing.broker.uri=local://mylocal",
+		"io.rsocket.routing.broker.cluster.uri=local://myclusterlocal"})
 public class CustomServerTransportFactoryTests {
 
 	@Autowired
@@ -61,27 +58,25 @@ public class CustomServerTransportFactoryTests {
 	@Test
 	public void customPropertiesAreSet() {
 		assertThat(properties.getBrokerId()).isEqualTo(Id.from("00000000-0000-0000-0000-000000000008"));
-		assertThat(properties.getCustom()).isNotNull();
-		assertThat(properties.getCustom().getArgs()).containsOnly(entry("name", "mylocal"));
-		assertThat(clusterProperties.getCustom()).isNotNull();
-		assertThat(clusterProperties.getCustom().getArgs()).containsOnly(entry("name", "myclusterlocal"));
+		assertThat(properties.getUri()).isNotNull().hasScheme("local").hasHost("mylocal");
+		assertThat(clusterProperties.getUri()).isNotNull().hasScheme("local").hasHost("myclusterlocal");
 		bootstrapProvider.stream()
 				.filter(b -> b.getServerFactory() instanceof MyLocalRSocketServerFactory).findFirst()
 				.orElseThrow(() -> new IllegalStateException("no MyLocalRSocketServerFactory found"));
 	}
 
 	protected static class MyLocalRSocketServerFactory implements RSocketServerFactory {
-		private final TransportProperties properties;
+		private final URI uri;
 
-		public MyLocalRSocketServerFactory(TransportProperties properties) {
-			this.properties = properties;
+		public MyLocalRSocketServerFactory(URI uri) {
+			this.uri = uri;
 		}
 
 		@Override
 		public RSocketServer create(SocketAcceptor socketAcceptor) {
 			io.rsocket.core.RSocketServer server = io.rsocket.core.RSocketServer
 					.create(socketAcceptor);
-			String name = properties.getCustom().getArgs().get("name");
+			String name = uri.getHost();
 			Mono<Closeable> starter = server.bind(LocalServerTransport.create(name));
 
 			return new RSocketServer() {
@@ -106,9 +101,7 @@ public class CustomServerTransportFactoryTests {
 
 				@Override
 				public InetSocketAddress address() {
-					// FIXME: see https://github.com/spring-projects/spring-boot/pull/23084
-					return InetSocketAddress.createUnresolved("localhost", 0);
-					//return null;
+					return null;
 				}
 			};
 		}
@@ -123,13 +116,13 @@ public class CustomServerTransportFactoryTests {
 		ServerTransportFactory customServerTransportFactory() {
 			return new ServerTransportFactory() {
 				@Override
-				public boolean supports(TransportProperties properties) {
-					return properties.hasCustomTransport() && properties.getCustom().getType().equals("local");
+				public boolean supports(URI uri) {
+					return uri.getScheme().equalsIgnoreCase("local");
 				}
 
 				@Override
-				public RSocketServerFactory create(TransportProperties properties) {
-					return new MyLocalRSocketServerFactory(properties);
+				public RSocketServerFactory create(URI uri) {
+					return new MyLocalRSocketServerFactory(uri);
 				}
 			};
 		}

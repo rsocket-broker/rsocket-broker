@@ -16,15 +16,15 @@
 
 package io.rsocket.routing.broker.spring;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 
 import io.rsocket.routing.common.Id;
-import io.rsocket.routing.common.spring.TransportProperties;
 
 // TODO: does the broker reuse client properties?
-public class BrokerProperties extends TransportProperties {
+public class BrokerProperties {
 
 	public static final String ROUND_ROBIN_LOAD_BALANCER_NAME = "roundrobin";
 	public static final String WEIGHTED_BALANCER_NAME = "weighted";
@@ -33,13 +33,13 @@ public class BrokerProperties extends TransportProperties {
 	 */
 	private Id brokerId = Id.random();
 
+	private URI uri = URI.create("tcp://localhost:8001");
+
+	//TODO: flag send to client
+
 	private String defaultLoadBalancer = ROUND_ROBIN_LOAD_BALANCER_NAME;
 
 	private List<Broker> brokers = new ArrayList<>();
-
-	public BrokerProperties() {
-		getTcp().setPort(8001);
-	}
 
 	public Id getBrokerId() {
 		return this.brokerId;
@@ -47,6 +47,14 @@ public class BrokerProperties extends TransportProperties {
 
 	public void setBrokerId(Id brokerId) {
 		this.brokerId = brokerId;
+	}
+
+	public URI getUri() {
+		return this.uri;
+	}
+
+	public void setUri(URI uri) {
+		this.uri = uri;
 	}
 
 	public String getDefaultLoadBalancer() {
@@ -70,24 +78,30 @@ public class BrokerProperties extends TransportProperties {
 		return new StringJoiner(", ", BrokerProperties.class
 				.getSimpleName() + "[", "]")
 				.add("brokerId=" + brokerId)
+				.add("uri=" + uri)
 				.add("defaultLoadBalancer=" + defaultLoadBalancer)
 				.add("brokers=" + brokers)
-				.add("custom=" + getCustom())
-				.add("tcp=" + getTcp())
-				.add("websocket=" + getWebsocket())
 				.toString();
 	}
 
 	public static class Broker {
-		private final TransportProperties cluster = new TransportProperties();
-		private final TransportProperties proxy = new TransportProperties();
+		private URI cluster;
+		private URI proxy;
 
-		public TransportProperties getCluster() {
+		public URI getCluster() {
 			return this.cluster;
 		}
 
-		public TransportProperties getProxy() {
+		public void setCluster(URI cluster) {
+			this.cluster = cluster;
+		}
+
+		public URI getProxy() {
 			return this.proxy;
+		}
+
+		public void setProxy(URI proxy) {
+			this.proxy = proxy;
 		}
 
 		@Override

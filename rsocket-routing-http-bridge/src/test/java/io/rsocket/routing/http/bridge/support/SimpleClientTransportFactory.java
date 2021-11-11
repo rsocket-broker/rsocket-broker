@@ -16,8 +16,9 @@
 
 package io.rsocket.routing.http.bridge.support;
 
+import java.net.URI;
+
 import io.rsocket.routing.common.spring.ClientTransportFactory;
-import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.transport.ClientTransport;
 
 /**
@@ -29,12 +30,12 @@ import io.rsocket.transport.ClientTransport;
 public class SimpleClientTransportFactory implements ClientTransportFactory {
 
 	@Override
-	public boolean supports(TransportProperties broker) {
+	public boolean supports(URI uri) {
 		return true;
 	}
 
 	@Override
-	public ClientTransport create(TransportProperties broker) {
-		return new SimpleClientTransport(broker);
+	public ClientTransport create(URI uri) {
+		return new SimpleClientTransport(uri);
 	}
 }

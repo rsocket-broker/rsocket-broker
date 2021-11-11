@@ -16,6 +16,8 @@
 
 package io.rsocket.routing.broker.spring.cluster;
 
+import java.net.URI;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -34,7 +36,6 @@ import io.rsocket.routing.broker.spring.BrokerProperties.Broker;
 import io.rsocket.routing.common.Id;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
 import io.rsocket.routing.common.spring.MimeTypes;
-import io.rsocket.routing.common.spring.TransportProperties;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.BrokerInfoFlyweight;
 import io.rsocket.transport.ClientTransport;
@@ -123,7 +124,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 		}
 	}
 
-	private RSocketRequester connect(TransportProperties transport, Object data,
+	private RSocketRequester connect(URI transportUri, Object data,
 			Object metadata, RSocket responderRSocket) {
 		RSocketRequester.Builder builder = RSocketRequester.builder()
 				.rsocketStrategies(strategies)
@@ -145,8 +146,8 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 				.acceptor((setup, sendingSocket) -> Mono.just(responderRSocket)));
 
 		ClientTransport clientTransport = transportFactories.orderedStream()
-				.filter(factory -> factory.supports(transport)).findFirst()
-				.map(factory -> factory.create(transport))
+				.filter(factory -> factory.supports(transportUri)).findFirst()
+				.map(factory -> factory.create(transportUri))
 				.orElseThrow(() -> new IllegalArgumentException("Unknown transport " + properties));
 
 		return builder.transport(clientTransport);

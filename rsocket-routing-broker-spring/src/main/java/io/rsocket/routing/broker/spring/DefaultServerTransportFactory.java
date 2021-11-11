@@ -16,10 +16,10 @@
 
 package io.rsocket.routing.broker.spring;
 
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
 import java.util.stream.Collectors;
-
-import io.rsocket.routing.common.spring.TransportProperties;
-import io.rsocket.routing.common.spring.TransportProperties.HostPortProperties;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.PropertyMapper;
@@ -40,47 +40,52 @@ public class DefaultServerTransportFactory implements ServerTransportFactory {
 	}
 
 	@Override
-	public boolean supports(TransportProperties properties) {
-		return properties.getWebsocket() != null || properties.getTcp() != null;
+	public boolean supports(URI uri) {
+		return isWebsocket(uri) || isTcp(uri);
+	}
+
+	private static boolean isTcp(URI uri) {
+		return uri.getScheme().equalsIgnoreCase("tcp");
+	}
+
+	private static boolean isWebsocket(URI uri) {
+		return uri.getScheme().equalsIgnoreCase("ws") || uri.getScheme().equalsIgnoreCase("wss");
 	}
 
 	@Override
-	public RSocketServerFactory create(TransportProperties properties) {
+	public RSocketServerFactory create(URI uri) {
 		NettyRSocketServerFactory factory = new NettyRSocketServerFactory();
 		factory.setResourceFactory(resourceFactory);
-		factory.setTransport(findTransport(properties));
+		factory.setTransport(findTransport(uri));
 		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
-		HostPortProperties addressPort = findHostAndPort(properties);
-		map.from(addressPort.getHostAsAddress()).to(factory::setAddress);
-		map.from(addressPort.getPort()).to(factory::setPort);
+		map.from(getHostAsAddress(uri)).to(factory::setAddress);
+		map.from(uri.getPort()).to(factory::setPort);
 		factory.setRSocketServerCustomizers(processors.orderedStream().collect(Collectors
 				.toList()));
 		return factory;
 	}
 
 
-	/**
-	 * Find the selected transport in order of precedence: custom, websocket, tcp.
-	 * @return the selected transport.
-	 */
-	private static HostPortProperties findHostAndPort(TransportProperties properties) {
-		if (properties.hasCustomTransport()) {
-			return null;
-		} else if (properties.getWebsocket() != null) {
-			return properties.getWebsocket();
-		} else if (properties.getTcp() != null) {
-			return properties.getTcp();
-		}
-		throw new IllegalStateException("No valid Transport configured " + properties);
-	}
-
-	private static RSocketServer.Transport findTransport(TransportProperties properties) {
-		if (properties.getWebsocket() != null) {
+	private static RSocketServer.Transport findTransport(URI uri) {
+		if (isWebsocket(uri)) {
 			return RSocketServer.Transport.WEBSOCKET;
-		} else if (properties.getTcp() != null) {
+		}
+		else if (isTcp(uri)) {
 			return RSocketServer.Transport.TCP;
 		}
-		throw new IllegalStateException("Unknown Transport " + properties);
+		throw new IllegalStateException("Unknown Transport " + uri);
 	}
 
+	private static InetAddress getHostAsAddress(URI uri) {
+		if (uri == null) {
+			return null;
+		}
+		try {
+			return InetAddress.getByName(uri.getHost());
+		}
+		catch (UnknownHostException ex) {
+			throw new IllegalStateException("Unknown host " + uri.getHost(), ex);
+		}
+
+	}
 }

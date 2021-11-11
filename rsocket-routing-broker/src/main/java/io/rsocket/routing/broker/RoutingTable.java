@@ -27,9 +27,8 @@ import io.rsocket.routing.frames.RouteJoin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxProcessor;
+import reactor.core.publisher.Sinks;
 
 /**
  * Maintains index of RouteJoin objects. Actions include find, add and remove. Also
@@ -41,10 +40,8 @@ public class RoutingTable implements Disposable {
 	private static final Logger logger = LoggerFactory.getLogger(RoutingTable.class);
 
 	private final IndexedMap<Id, RouteJoin, Tags> routes = new RoaringBitmapIndexedMap<>();
-	private final FluxProcessor<RouteJoin, RouteJoin> joinEvents =
-			DirectProcessor.<RouteJoin>create().serialize();
-	private final FluxProcessor<RouteJoin, RouteJoin> leaveEvents =
-			DirectProcessor.<RouteJoin>create().serialize();
+	private final Sinks.Many<RouteJoin> joinEvents = Sinks.many().multicast().directBestEffort();
+	private final Sinks.Many<RouteJoin> leaveEvents = Sinks.many().multicast().directBestEffort();
 
 	public RouteJoin find(Id routeId) {
 		synchronized (routes) {
@@ -61,23 +58,26 @@ public class RoutingTable implements Disposable {
 	public void add(RouteJoin routeJoin) {
 		logger.debug("adding RouteJoin {}", routeJoin);
 		synchronized (routes) {
+			// TODO: check timestamp
 			routes.put(routeJoin.getRouteId(), routeJoin, routeJoin.getTags());
 		}
-		joinEvents.onNext(routeJoin);
+		joinEvents.tryEmitNext(routeJoin);
 	}
 
+	// TODO: remove with timestamp
 	public void remove(Id routeId) {
 		logger.debug("removing routeId {}", routeId);
 		synchronized (routes) {
 			RouteJoin routeJoin = routes.remove(routeId);
 			if (routeJoin != null) {
-				leaveEvents.onNext(routeJoin);
+				leaveEvents.tryEmitNext(routeJoin);
 			}
 		}
 	}
 
 	public Flux<RouteJoin> joinEvents(Predicate<RouteJoin> predicate) {
-		return joinEvents.filter(predicate);
+		// merge with existing routes
+		return joinEvents.asFlux().filter(predicate);
 	}
 
 	public Flux<RouteJoin> joinEvents(Tags tags) {
@@ -85,7 +85,7 @@ public class RoutingTable implements Disposable {
 	}
 
 	public Flux<RouteJoin> leaveEvents(Tags tags) {
-		return leaveEvents.filter(containsTags(tags));
+		return leaveEvents.asFlux().filter(containsTags(tags));
 	}
 
 	@Override
