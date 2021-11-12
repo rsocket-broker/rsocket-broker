@@ -22,6 +22,7 @@ import java.util.function.Predicate;
 
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.spring.BrokerProperties;
+import io.rsocket.routing.broker.spring.cluster.AbstractConnections.BrokerInfoEntry;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
 import org.slf4j.Logger;
@@ -51,9 +52,9 @@ public class RouteJoinListener implements Closeable {
 						.flatMap(entry -> sendRouteJoin(entry, routeJoin))).subscribe();
 	}
 
-	private Mono<RouteJoin> sendRouteJoin(Map.Entry<BrokerInfo, RSocketRequester> entry,
+	private Mono<RouteJoin> sendRouteJoin(BrokerInfoEntry<RSocketRequester> entry,
 			RouteJoin routeJoin) {
-		logger.info("sending RouteJoin {} to {}", routeJoin, entry.getKey());
+		logger.info("sending RouteJoin {} to {}", routeJoin, entry.getBrokerInfo());
 		RSocketRequester requester = entry.getValue();
 		return requester.route("cluster.route-join")
 				.data(routeJoin)

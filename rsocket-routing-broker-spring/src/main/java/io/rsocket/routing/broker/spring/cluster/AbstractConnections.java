@@ -16,12 +16,12 @@
 
 package io.rsocket.routing.broker.spring.cluster;
 
+import java.util.Collection;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.rsocket.RSocket;
+import io.rsocket.routing.common.Id;
 import io.rsocket.routing.frames.BrokerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,32 +39,42 @@ public abstract class AbstractConnections<T> {
 	protected final Sinks.Many<BrokerInfo> joinEvents = Sinks.many().multicast().directBestEffort();
 	protected final Sinks.Many<BrokerInfo> leaveEvents = Sinks.many().multicast().directBestEffort();
 
-	protected final Map<BrokerInfo, T> connections = new ConcurrentHashMap<>();
+	protected final Map<Id, BrokerInfoEntry<T>> connections = new ConcurrentHashMap<>();
 
 	public boolean contains(BrokerInfo brokerInfo) {
-		return connections.containsKey(brokerInfo);
+		return connections.containsKey(brokerInfo.getBrokerId());
 	}
 
-	public Set<Entry<BrokerInfo, T>> entries() {
-		return connections.entrySet();
+	public Collection<BrokerInfoEntry<T>> entries() {
+		return connections.values();
 	}
 
 	public T get(BrokerInfo brokerInfo) {
-		return connections.get(brokerInfo);
+		BrokerInfoEntry<T> entry = connections.get(brokerInfo.getBrokerId());
+		if (entry == null) {
+			return null;
+		}
+		return entry.value;
 	}
 
 	public T put(BrokerInfo brokerInfo, T connection) {
 		logger.debug("adding {} RSocket {}", brokerInfo, connection);
-		T old = connections.put(brokerInfo, connection);
-		joinEvents.tryEmitNext(brokerInfo);
-		registerCleanup(brokerInfo, connection);
-		return old;
+		BrokerInfoEntry<T> old = connections.put(brokerInfo.getBrokerId(), new BrokerInfoEntry<>(connection, brokerInfo));
+		if (old != null) {
+			joinEvents.tryEmitNext(brokerInfo);
+			registerCleanup(brokerInfo, connection);
+			return old.value;
+		}
+		return null;
 	}
 
 	public T remove(BrokerInfo brokerInfo) {
-		T removed = connections.remove(brokerInfo);
-		leaveEvents.tryEmitNext(brokerInfo);
-		return removed;
+		BrokerInfoEntry<T> removed = connections.remove(brokerInfo.getBrokerId());
+		if (removed != null) {
+			leaveEvents.tryEmitNext(brokerInfo);
+			return removed.value;
+		}
+		return null;
 	}
 
 	protected abstract Mono<RSocket> getRSocket(T connection);
@@ -73,7 +83,7 @@ public abstract class AbstractConnections<T> {
 		getRSocket(connection).map(rSocket -> rSocket.onClose().doFinally(signal -> {
 			// cleanup everything related to this connection
 			logger.debug("removing connection {}", brokerInfo);
-			connections.remove(brokerInfo);
+			connections.remove(brokerInfo.getBrokerId());
 			leaveEvents.tryEmitNext(brokerInfo);
 
 			// TODO: remove routes for broker
@@ -88,4 +98,21 @@ public abstract class AbstractConnections<T> {
 		return leaveEvents.asFlux().filter(brokerInfo -> true);
 	}
 
+	public static class BrokerInfoEntry<T> {
+		final T value;
+		final BrokerInfo brokerInfo;
+
+		public BrokerInfoEntry(T value, BrokerInfo brokerInfo) {
+			this.value = value;
+			this.brokerInfo = brokerInfo;
+		}
+
+		public T getValue() {
+			return this.value;
+		}
+
+		public BrokerInfo getBrokerInfo() {
+			return this.brokerInfo;
+		}
+	}
 }
