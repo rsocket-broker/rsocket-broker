@@ -23,8 +23,17 @@ import java.util.StringJoiner;
 
 import io.rsocket.routing.common.Id;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.Errors;
+import org.springframework.validation.ValidationUtils;
+import org.springframework.validation.Validator;
+import org.springframework.validation.annotation.Validated;
+
 // TODO: does the broker reuse client properties?
-public class BrokerProperties {
+@Validated
+@ConfigurationProperties(BrokerProperties.PREFIX)
+public class BrokerProperties implements Validator {
+	public static final String PREFIX = "io.rsocket.routing.broker";
 
 	public static final String ROUND_ROBIN_LOAD_BALANCER_NAME = "roundrobin";
 	public static final String WEIGHTED_BALANCER_NAME = "weighted";
@@ -38,6 +47,8 @@ public class BrokerProperties {
 	//TODO: flag send to client
 
 	private String defaultLoadBalancer = ROUND_ROBIN_LOAD_BALANCER_NAME;
+
+	private Cluster cluster = new Cluster();
 
 	private List<Broker> brokers = new ArrayList<>();
 
@@ -65,6 +76,14 @@ public class BrokerProperties {
 		this.defaultLoadBalancer = defaultLoadBalancer;
 	}
 
+	public Cluster getCluster() {
+		return this.cluster;
+	}
+
+	public void setCluster(Cluster cluster) {
+		this.cluster = cluster;
+	}
+
 	public List<Broker> getBrokers() {
 		return this.brokers;
 	}
@@ -74,14 +93,62 @@ public class BrokerProperties {
 	}
 
 	@Override
+	public boolean supports(Class<?> clazz) {
+		return BrokerProperties.class.isAssignableFrom(clazz);
+	}
+
+	@Override
+	public void validate(Object target, Errors errors) {
+		ValidationUtils.rejectIfEmptyOrWhitespace(errors, "uri", "field.required");
+
+		BrokerProperties properties = (BrokerProperties) target;
+		if (properties.getCluster().isEnabled() && properties.getCluster().getUri() == null) {
+			errors.rejectValue("cluster.uri", "field.required", Cluster.PREFIX + ".uri may not be null if cluster is enabled");
+		}
+	}
+
+	@Override
 	public String toString() {
 		return new StringJoiner(", ", BrokerProperties.class
 				.getSimpleName() + "[", "]")
 				.add("brokerId=" + brokerId)
 				.add("uri=" + uri)
 				.add("defaultLoadBalancer=" + defaultLoadBalancer)
+				.add("cluster=" + cluster)
 				.add("brokers=" + brokers)
 				.toString();
+	}
+
+	public static class Cluster {
+		public static final String PREFIX = BrokerProperties.PREFIX + ".cluster";
+
+		private boolean enabled = true;
+
+		private URI uri = URI.create("tcp://localhost:7001");
+
+		public boolean isEnabled() {
+			return this.enabled;
+		}
+
+		public void setEnabled(boolean enabled) {
+			this.enabled = enabled;
+		}
+
+		public URI getUri() {
+			return this.uri;
+		}
+
+		public void setUri(URI uri) {
+			this.uri = uri;
+		}
+
+		@Override
+		public String toString() {
+			return new StringJoiner(", ", Cluster.class.getSimpleName() + "[", "]")
+					.add("enabled=" + enabled)
+					.add("uri=" + uri)
+					.toString();
+		}
 	}
 
 	public static class Broker {

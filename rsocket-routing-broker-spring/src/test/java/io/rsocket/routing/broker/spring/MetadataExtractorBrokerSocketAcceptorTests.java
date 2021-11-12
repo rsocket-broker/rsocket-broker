@@ -23,7 +23,8 @@ import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest(properties = {"io.rsocket.routing.broker.tcp.port=0", "io.rsocket.routing.broker.cluster.tcp.port=0"})
+@SpringBootTest(properties = {"io.rsocket.routing.broker.uri=tcp://localhost:0",
+		"io.rsocket.routing.broker.cluster.uri=tcp://localhost:0"})
 public class MetadataExtractorBrokerSocketAcceptorTests {
 
 	@Test

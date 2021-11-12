@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +30,7 @@ import org.springframework.context.annotation.Bean;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(properties = {"io.rsocket.routing.broker.broker-id=00000000-0000-0000-0000-000000000007",
+		"io.rsocket.routing.broker.cluster.uri=tcp://myhost:321",
 		"io.rsocket.routing.broker.brokers[0].cluster=tcp://myhost:99"})
 public class BrokerPropertiesTests {
 
@@ -49,12 +49,16 @@ public class BrokerPropertiesTests {
 		assertThat(uri).hasScheme("tcp").hasHost("myhost").hasPort(99);
 	}
 
+	@Test
+	public void clusterIsSet() {
+		assertThat(properties.getCluster().getUri()).hasScheme("tcp").hasHost("myhost").hasPort(321);
+	}
+
 	@SpringBootConfiguration
 	@EnableConfigurationProperties
 	protected static class TestConfig {
 
 		@Bean
-		@ConfigurationProperties(BrokerAutoConfiguration.BROKER_PREFIX)
 		BrokerProperties brokerProperties() {
 			return new BrokerProperties();
 		}

@@ -16,10 +16,15 @@
 
 package io.rsocket.routing.broker.spring.cluster;
 
+import java.net.URI;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.rsocket.core.DefaultConnectionSetupPayload;
+import io.rsocket.routing.broker.spring.BrokerProperties;
 import io.rsocket.routing.common.Id;
+import io.rsocket.routing.common.Tags;
+import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.BrokerInfoFlyweight;
 import io.rsocket.routing.frames.FrameHeaderFlyweight;
 import io.rsocket.routing.frames.FrameType;
@@ -32,14 +37,20 @@ public class ClusterJoinListenerTests {
 	@Test
 	void testGetConnectionSetupPayload() {
 		Id id = Id.from("00000000-0000-0000-0000-000000000011");
+		BrokerProperties properties = new BrokerProperties();
+		properties.setBrokerId(id);
+		properties.setUri(URI.create("tcp://localhost:1111"));
+		properties.getCluster().setUri(URI.create("tcp://localhost:2222"));
 		DefaultConnectionSetupPayload setupPayload = ClusterJoinListener
-				.getConnectionSetupPayload(ByteBufAllocator.DEFAULT, id);
+				.getConnectionSetupPayload(ByteBufAllocator.DEFAULT, properties);
 		ByteBuf data = setupPayload.data();
 		assertThat(FrameHeaderFlyweight.frameType(data)).isEqualTo(FrameType.BROKER_INFO);
 		assertThat(BrokerInfoFlyweight.brokerId(data)).isEqualTo(id);
 		assertThat(BrokerInfoFlyweight.timestamp(data)).isGreaterThan(0);
-		assertThat(BrokerInfoFlyweight.tags(data)).isNotNull();
-
+		Tags tags = BrokerInfoFlyweight.tags(data);
+		assertThat(tags).isNotNull();
+		assertThat(tags.asMap()).containsEntry(WellKnownKey.BROKER_PROXY_URI.getKey(), properties.getUri().toString())
+				.containsEntry(WellKnownKey.BROKER_CLUSTER_URI.getKey(), properties.getCluster().getUri().toString());
 	}
 
 }

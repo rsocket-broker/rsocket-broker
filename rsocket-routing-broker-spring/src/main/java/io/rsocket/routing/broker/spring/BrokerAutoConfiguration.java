@@ -81,13 +81,11 @@ import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHa
 
 @Configuration
 @EnableConfigurationProperties
-@ConditionalOnProperty(name = BrokerAutoConfiguration.BROKER_PREFIX + ".enabled", matchIfMissing = true)
+@ConditionalOnProperty(name = BrokerProperties.PREFIX + ".enabled", matchIfMissing = true)
 @AutoConfigureAfter({RSocketStrategiesAutoConfiguration.class, BrokerRSocketStrategiesAutoConfiguration.class})
 public class BrokerAutoConfiguration implements InitializingBean {
 
 	private static final Log log = LogFactory.getLog(BrokerAutoConfiguration.class);
-
-	public static final String BROKER_PREFIX = "io.rsocket.routing.broker";
 
 	private final ApplicationContext context;
 
@@ -135,7 +133,6 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
-	@ConfigurationProperties(BROKER_PREFIX)
 	public BrokerProperties brokerProperties() {
 		return new BrokerProperties();
 	}
@@ -233,10 +230,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Configuration
-	@ConditionalOnProperty(name = ClusterConfiguration.PREFIX + ".enabled", matchIfMissing = true)
+	@ConditionalOnProperty(name = BrokerProperties.Cluster.PREFIX + ".enabled", matchIfMissing = true)
 	protected static class ClusterConfiguration {
-
-		public static final String PREFIX = BROKER_PREFIX + ".cluster";
 
 		@Bean
 		public ClusterController clusterController(BrokerProperties properties,
@@ -266,19 +261,14 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		}
 
 		@Bean
-		@ConfigurationProperties(PREFIX)
-		public ClusterBrokerProperties clusterBrokerProperties() {
-			return new ClusterBrokerProperties();
-		}
-
-		@Bean
 		public BrokerRSocketServerBootstrap clusterRSocketServerBootstrap(
-				ClusterBrokerProperties properties,
+				BrokerProperties properties,
 				ObjectProvider<ServerTransportFactory> transportFactories,
 				ClusterSocketAcceptor clusterSocketAcceptor) {
-			RSocketServerFactory serverFactory = findRSocketServerFactory(properties.getUri(), transportFactories);
-			return new BrokerRSocketServerBootstrap("cluster", findTransportName(properties.getUri()), serverFactory, clusterSocketAcceptor);
+			RSocketServerFactory serverFactory = findRSocketServerFactory(properties.getCluster().getUri(), transportFactories);
+			return new BrokerRSocketServerBootstrap("cluster", findTransportName(properties.getCluster().getUri()), serverFactory, clusterSocketAcceptor);
 		}
+
 	}
 
 	@Bean

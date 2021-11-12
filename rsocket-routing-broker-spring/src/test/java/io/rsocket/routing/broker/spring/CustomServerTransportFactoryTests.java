@@ -50,16 +50,13 @@ public class CustomServerTransportFactoryTests {
 	BrokerProperties properties;
 
 	@Autowired
-	ClusterBrokerProperties clusterProperties;
-
-	@Autowired
 	ObjectProvider<BrokerRSocketServerBootstrap> bootstrapProvider;
 
 	@Test
 	public void customPropertiesAreSet() {
 		assertThat(properties.getBrokerId()).isEqualTo(Id.from("00000000-0000-0000-0000-000000000008"));
 		assertThat(properties.getUri()).isNotNull().hasScheme("local").hasHost("mylocal");
-		assertThat(clusterProperties.getUri()).isNotNull().hasScheme("local").hasHost("myclusterlocal");
+		assertThat(properties.getCluster().getUri()).isNotNull().hasScheme("local").hasHost("myclusterlocal");
 		bootstrapProvider.stream()
 				.filter(b -> b.getServerFactory() instanceof MyLocalRSocketServerFactory).findFirst()
 				.orElseThrow(() -> new IllegalStateException("no MyLocalRSocketServerFactory found"));

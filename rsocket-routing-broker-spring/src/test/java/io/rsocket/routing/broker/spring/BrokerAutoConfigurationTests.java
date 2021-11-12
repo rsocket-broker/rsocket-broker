@@ -48,7 +48,7 @@ public class BrokerAutoConfigurationTests {
 	public void brokerDisabled() {
 		new ReactiveWebApplicationContextRunner().withConfiguration(AutoConfigurations
 				.of(BrokerAutoConfiguration.class, RSocketStrategiesAutoConfiguration.class, BrokerRSocketStrategiesAutoConfiguration.class))
-				.withPropertyValues(BrokerAutoConfiguration.BROKER_PREFIX + ".enabled=false")
+				.withPropertyValues(BrokerProperties.PREFIX + ".enabled=false")
 				.run(context -> assertThat(context).doesNotHaveBean(BrokerProperties.class));
 	}
 
@@ -56,7 +56,7 @@ public class BrokerAutoConfigurationTests {
 	public void clusterDisabled() {
 		new ReactiveWebApplicationContextRunner().withConfiguration(AutoConfigurations
 				.of(BrokerAutoConfiguration.class, RSocketStrategiesAutoConfiguration.class, BrokerRSocketStrategiesAutoConfiguration.class))
-				.withPropertyValues(BrokerAutoConfiguration.ClusterConfiguration.PREFIX+ ".enabled=false")
+				.withPropertyValues(BrokerProperties.Cluster.PREFIX+ ".enabled=false")
 				.run(context -> {
 					assertThat(context).hasSingleBean(BrokerProperties.class);
 					assertThat(context).doesNotHaveBean(ClusterController.class);
@@ -95,7 +95,6 @@ public class BrokerAutoConfigurationTests {
 					assertThat(context).hasSingleBean(DefaultClientTransportFactory.class);
 					assertThat(context).hasSingleBean(ClusterJoinListener.class);
 					assertThat(context).hasSingleBean(ClusterSocketAcceptor.class);
-					assertThat(context).hasSingleBean(ClusterBrokerProperties.class);
 					assertThat(context).hasBean("clusterRSocketServerBootstrap");
 				});
 	}

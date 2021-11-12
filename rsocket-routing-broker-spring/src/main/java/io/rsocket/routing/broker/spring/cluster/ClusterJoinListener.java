@@ -33,7 +33,7 @@ import io.rsocket.routing.broker.rsocket.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.spring.BrokerProperties;
 import io.rsocket.routing.broker.spring.BrokerProperties.Broker;
-import io.rsocket.routing.common.Id;
+import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
 import io.rsocket.routing.common.spring.MimeTypes;
 import io.rsocket.routing.frames.BrokerInfo;
@@ -64,13 +64,9 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	private final BrokerProperties properties;
-
 	private final BrokerConnections brokerConnections;
-
 	private final ProxyConnections proxyConnections;
-
 	private final RSocketMessageHandler messageHandler;
-
 	private final RSocketStrategies strategies;
 	private final RoutingRSocketFactory routingRSocketFactory;
 	private final ObjectProvider<ClientTransportFactory> transportFactories;
@@ -93,7 +89,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 
 	@Override
 	public void onApplicationEvent(ApplicationReadyEvent event) {
-		BrokerInfo localBrokerInfo = BrokerInfo.from(properties.getBrokerId()).build();
+		BrokerInfo localBrokerInfo = getLocalBrokerInfo(properties);
 		// TODO: tags
 		for (Broker broker : properties.getBrokers()) {
 			logger.info("connecting to {}", broker);
@@ -122,6 +118,13 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 					})
 					.subscribe();
 		}
+	}
+
+	static BrokerInfo getLocalBrokerInfo(BrokerProperties properties) {
+		return BrokerInfo.from(properties.getBrokerId())
+				.with(WellKnownKey.BROKER_PROXY_URI, properties.getUri().toString())
+				.with(WellKnownKey.BROKER_CLUSTER_URI, properties.getCluster().getUri().toString())
+				.build();
 	}
 
 	private RSocketRequester connect(URI transportUri, Object data,
@@ -171,11 +174,12 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 				.dataBufferFactory();
 		NettyDataBufferFactory ndbf = (NettyDataBufferFactory) dataBufferFactory;
 		ByteBufAllocator byteBufAllocator = ndbf.getByteBufAllocator();
-		return getConnectionSetupPayload(byteBufAllocator, properties.getBrokerId());
+		return getConnectionSetupPayload(byteBufAllocator, this.properties);
 	}
 
-	static DefaultConnectionSetupPayload getConnectionSetupPayload(ByteBufAllocator byteBufAllocator, Id brokerId) {
-		BrokerInfo brokerInfo = BrokerInfo.from(brokerId).build();
+	static DefaultConnectionSetupPayload getConnectionSetupPayload(ByteBufAllocator byteBufAllocator,
+			BrokerProperties properties) {
+		BrokerInfo brokerInfo = getLocalBrokerInfo(properties);
 		ByteBuf encoded = BrokerInfoFlyweight
 				.encode(byteBufAllocator, brokerInfo.getBrokerId(),
 						brokerInfo.getTimestamp(), brokerInfo.getTags(), 0);
