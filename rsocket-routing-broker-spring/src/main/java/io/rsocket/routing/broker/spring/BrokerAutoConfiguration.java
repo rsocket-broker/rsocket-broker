@@ -44,6 +44,7 @@ import io.rsocket.routing.broker.rsocket.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.spring.cluster.BrokerConnections;
 import io.rsocket.routing.broker.spring.cluster.ClusterController;
 import io.rsocket.routing.broker.spring.cluster.ClusterJoinListener;
+import io.rsocket.routing.broker.spring.cluster.ClusterMonitor;
 import io.rsocket.routing.broker.spring.cluster.MessageHandlerClusterSocketAcceptor;
 import io.rsocket.routing.broker.spring.cluster.ProxyConnections;
 import io.rsocket.routing.broker.spring.cluster.RouteJoinListener;
@@ -78,6 +79,7 @@ import org.springframework.messaging.rsocket.DefaultMetadataExtractor;
 import org.springframework.messaging.rsocket.MetadataExtractor;
 import org.springframework.messaging.rsocket.RSocketStrategies;
 import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration
 @EnableConfigurationProperties
@@ -267,6 +269,24 @@ public class BrokerAutoConfiguration implements InitializingBean {
 				ClusterSocketAcceptor clusterSocketAcceptor) {
 			RSocketServerFactory serverFactory = findRSocketServerFactory(properties.getCluster().getUri(), transportFactories);
 			return new BrokerRSocketServerBootstrap("cluster", findTransportName(properties.getCluster().getUri()), serverFactory, clusterSocketAcceptor);
+		}
+
+	}
+
+	@Configuration
+	//TODO: also conditional on cluster enabled
+	@ConditionalOnProperty(BrokerProperties.Cluster.PREFIX + ".monitor.enabled")
+	@EnableScheduling
+	protected static class ClusterMonitorConfiguration {
+
+		@Bean
+		public ClusterMonitor clusterMonitor(BrokerConnections brokerConnections, ProxyConnections proxyConnections) {
+			return new ClusterMonitor(brokerConnections, proxyConnections);
+		}
+
+		@Bean
+		public RoutingTableMonitor routingTableMonitor(RoutingTable routingTable) {
+			return new RoutingTableMonitor(routingTable);
 		}
 
 	}
