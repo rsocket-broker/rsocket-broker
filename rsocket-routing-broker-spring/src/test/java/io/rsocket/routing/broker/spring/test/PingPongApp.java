@@ -150,6 +150,7 @@ public class PingPongApp {
 			logger.info("Starting Ping {}", id);
 			ConfigurableEnvironment env = event.getApplicationContext().getEnvironment();
 			Integer take = env.getProperty("ping.take", Integer.class, null);
+			String host = env.getProperty("ping.broker.host", String.class, "localhost");
 			Integer port = env.getProperty("ping.broker.port", Integer.class, 8001);
 
 			logger.debug("ping.take: {}", take);
@@ -157,7 +158,7 @@ public class PingPongApp {
 			RoutingRSocketClient client = RoutingRSocketConnector.create()
 					.routeId(id)
 					.serviceName("ping")
-					.toRSocketClient(TcpClientTransport.create(port));
+					.toRSocketClient(TcpClientTransport.create(host, port));
 
 			Flux<? extends String> pongFlux = Flux.from(doPing(take, client));
 
@@ -227,6 +228,7 @@ public class PingPongApp {
 				e.printStackTrace();
 			}
 			logger.info("Starting Pong");
+			String host = env.getProperty("pong.broker.host", String.class, "localhost");
 			Integer port = env.getProperty("pong.broker.port", Integer.class, 8001);
 			//MicrometerRSocketInterceptor interceptor = new MicrometerRSocketInterceptor(
 			//		meterRegistry, Tag.of("component", "pong"));
@@ -239,7 +241,7 @@ public class PingPongApp {
 						connector.acceptor((setup, sendingSocket) -> Mono
 								.just(accept(sendingSocket)));
 					})
-					.toRSocketClient(TcpClientTransport.create(port));
+					.toRSocketClient(TcpClientTransport.create(host, port));
 
 			rSocketClient.source() // proxy
 					.block();

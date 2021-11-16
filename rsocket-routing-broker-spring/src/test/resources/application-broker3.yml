@@ -1,0 +1,12 @@
+io.rsocket.routing.broker:
+  uri: tcp://localhost:8013
+  cluster:
+    uri: tcp://localhost:7013
+    monitor.enabled: true
+  broker-id: 00000000-0000-0000-0000-000000000013
+  brokers:
+    - cluster: tcp://localhost:7011
+      proxy: tcp://localhost:8011
+
+logging.level:
+  io.rsocket.routing.broker: DEBUG

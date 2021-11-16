@@ -16,17 +16,15 @@
 
 package io.rsocket.routing.broker.spring.test;
 
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.builder.SpringApplicationBuilder;
 
 @SpringBootConfiguration
 @EnableAutoConfiguration
-public class Broker2App {
+public class BrokerApp {
 
 	public static void main(String[] args) {
-		new SpringApplicationBuilder(Broker2App.class)
-				.properties("spring.config.name=broker2")
-				.run(args);
+		new SpringApplication(BrokerApp.class).run(args);
 	}
 }
