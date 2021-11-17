@@ -28,7 +28,7 @@ import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
 import io.rsocket.routing.broker.rsocket.UnicastRSocketLocator;
 import io.rsocket.routing.broker.spring.cluster.BrokerConnections;
 import io.rsocket.routing.broker.spring.cluster.ClusterController;
-import io.rsocket.routing.broker.spring.cluster.ClusterJoinListener;
+import io.rsocket.routing.broker.spring.cluster.ClusterNodeConnectionManager;
 import io.rsocket.routing.broker.spring.cluster.ProxyConnections;
 import io.rsocket.routing.broker.spring.cluster.RouteJoinListener;
 import io.rsocket.routing.common.spring.DefaultClientTransportFactory;
@@ -93,7 +93,7 @@ public class BrokerAutoConfigurationTests {
 					// cluster configuration
 					assertThat(context).hasSingleBean(ClusterController.class);
 					assertThat(context).hasSingleBean(DefaultClientTransportFactory.class);
-					assertThat(context).hasSingleBean(ClusterJoinListener.class);
+					assertThat(context).hasSingleBean(ClusterNodeConnectionManager.class);
 					assertThat(context).hasSingleBean(ClusterSocketAcceptor.class);
 					assertThat(context).hasBean("clusterRSocketServerBootstrap");
 				});

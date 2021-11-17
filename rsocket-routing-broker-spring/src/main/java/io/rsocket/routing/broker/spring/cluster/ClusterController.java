@@ -16,12 +16,16 @@
 
 package io.rsocket.routing.broker.spring.cluster;
 
+import java.net.URI;
 import java.time.Duration;
+import java.util.function.Consumer;
 
 import io.rsocket.exceptions.ApplicationErrorException;
 import io.rsocket.exceptions.RejectedSetupException;
 import io.rsocket.routing.broker.RoutingTable;
 import io.rsocket.routing.broker.spring.BrokerProperties;
+import io.rsocket.routing.broker.spring.BrokerProperties.Broker;
+import io.rsocket.routing.common.WellKnownKey;
 import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RouteJoin;
 import io.rsocket.routing.frames.RoutingFrame;
@@ -45,13 +49,16 @@ public class ClusterController {
 	private final BrokerProperties properties;
 	private final BrokerConnections brokerConnections;
 	private final RoutingTable routingTable;
+	private final Consumer<Broker> connectionEventPublisher;
 
 	private final Sinks.Many<BrokerInfo> connectEvents = Sinks.many().multicast().directBestEffort();
 
-	public ClusterController(BrokerProperties properties, BrokerConnections brokerConnections, RoutingTable routingTable) {
+	public ClusterController(BrokerProperties properties, BrokerConnections brokerConnections, RoutingTable routingTable,
+			Consumer<Broker> connectionEventPublisher) {
 		this.properties = properties;
 		this.brokerConnections = brokerConnections;
 		this.routingTable = routingTable;
+		this.connectionEventPublisher = connectionEventPublisher;
 
 		// subscribe to connect events so that a return BrokerInfo call is delayed
 		// This allows broker to maintain a single connection, but allows other broker
@@ -90,6 +97,16 @@ public class ClusterController {
 		return Mono.empty();
 	}
 
+	@MessageMapping("cluster.remote-broker-info")
+	public void brokerInfoUpdate(BrokerInfo brokerInfo) {
+		logger.info("received remote BrokerInfo {}", brokerInfo);
+		// make new cluster and proxy connections if they don't exist.
+		Broker broker = new Broker();
+		broker.setCluster(URI.create(brokerInfo.getTags().get(WellKnownKey.BROKER_CLUSTER_URI)));
+		broker.setProxy(URI.create(brokerInfo.getTags().get(WellKnownKey.BROKER_PROXY_URI)));
+		connectionEventPublisher.accept(broker);
+	}
+
 	@MessageMapping("cluster.broker-info")
 	public Mono<BrokerInfo> brokerInfo(BrokerInfo brokerInfo, RSocketRequester rSocketRequester) {
 		logger.info("received brokerInfo from {}", brokerInfo);
@@ -99,7 +116,7 @@ public class ClusterController {
 			logger.debug("connection for broker already exists {}", brokerInfo);
 			// we can now accept RouteJoin from this broker
 			// TODO: add flag to RoutingTable for this broker
-			return Mono.just(BrokerInfo.from(properties.getBrokerId()).build());
+			return Mono.just(getLocalBrokerInfo());
 		}
 
 		// else store broker info
@@ -112,11 +129,18 @@ public class ClusterController {
 	//TODO: @MessageMapping("cluster.broker-info")
 
 	private Mono<BrokerInfo> sendBrokerInfo(RSocketRequester rSocketRequester, BrokerInfo brokerInfo) {
-		BrokerInfo localBrokerInfo = BrokerInfo.from(properties.getBrokerId()).build();
+		BrokerInfo localBrokerInfo = getLocalBrokerInfo();
 		return rSocketRequester.route("cluster.broker-info")
 				.data(localBrokerInfo)
 				.retrieveMono(BrokerInfo.class)
 				.map(bi -> localBrokerInfo);
+	}
+
+	private BrokerInfo getLocalBrokerInfo() {
+		return BrokerInfo.from(properties.getBrokerId())
+				.with(WellKnownKey.BROKER_PROXY_URI, properties.getUri().toString())
+				.with(WellKnownKey.BROKER_CLUSTER_URI, properties.getCluster().getUri().toString())
+				.build();
 	}
 
 	@MessageMapping("cluster.route-join")

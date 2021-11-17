@@ -29,6 +29,9 @@ public class BrokerConnections extends AbstractConnections<RSocketRequester> {
 
 	@Override
 	protected Mono<RSocket> getRSocket(RSocketRequester requester) {
-		return requester.rsocketClient().source();
+		if (requester.rsocketClient() != null) {
+			return requester.rsocketClient().source();
+		}
+		return Mono.just(requester.rsocket());
 	}
 }

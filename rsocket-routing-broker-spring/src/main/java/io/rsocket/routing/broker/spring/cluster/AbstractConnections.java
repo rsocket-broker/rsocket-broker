@@ -36,7 +36,7 @@ import reactor.core.publisher.Sinks;
 public abstract class AbstractConnections<T> {
 	protected final Logger logger = LoggerFactory.getLogger(getClass());
 
-	protected final Sinks.Many<BrokerInfo> joinEvents = Sinks.many().multicast().directBestEffort();
+	protected final Sinks.Many<BrokerInfoEntry<T>> joinEvents = Sinks.many().multicast().directBestEffort();
 	protected final Sinks.Many<BrokerInfo> leaveEvents = Sinks.many().multicast().directBestEffort();
 
 	protected final Map<Id, BrokerInfoEntry<T>> connections = new ConcurrentHashMap<>();
@@ -59,19 +59,20 @@ public abstract class AbstractConnections<T> {
 
 	public T put(BrokerInfo brokerInfo, T connection) {
 		logger.debug("adding {} RSocket {}", brokerInfo, connection);
-		BrokerInfoEntry<T> old = connections.put(brokerInfo.getBrokerId(), new BrokerInfoEntry<>(connection, brokerInfo));
-		if (old != null) {
-			joinEvents.tryEmitNext(brokerInfo);
+		BrokerInfoEntry<T> entry = new BrokerInfoEntry<>(connection, brokerInfo);
+		BrokerInfoEntry<T> old = connections.put(brokerInfo.getBrokerId(), entry);
+		if (old == null) { // new connection
+			joinEvents.tryEmitNext(entry);
 			registerCleanup(brokerInfo, connection);
-			return old.value;
+			return null;
 		}
-		return null;
+		return old.value;
 	}
 
 	public T remove(BrokerInfo brokerInfo) {
 		BrokerInfoEntry<T> removed = connections.remove(brokerInfo.getBrokerId());
 		if (removed != null) {
-			leaveEvents.tryEmitNext(brokerInfo);
+			leaveEvents.tryEmitNext(removed.getBrokerInfo());
 			return removed.value;
 		}
 		return null;
@@ -80,7 +81,7 @@ public abstract class AbstractConnections<T> {
 	protected abstract Mono<RSocket> getRSocket(T connection);
 
 	protected void registerCleanup(BrokerInfo brokerInfo, T connection) {
-		getRSocket(connection).map(rSocket -> rSocket.onClose().doFinally(signal -> {
+		getRSocket(connection).flatMap(rSocket -> rSocket.onClose().doFinally(signal -> {
 			// cleanup everything related to this connection
 			logger.debug("removing connection {}", brokerInfo);
 			connections.remove(brokerInfo.getBrokerId());
@@ -90,12 +91,14 @@ public abstract class AbstractConnections<T> {
 		})).subscribe();
 	}
 
-	public Flux<BrokerInfo> joinEvents() {
-		return joinEvents.asFlux().filter(brokerInfo -> true);
+	public Flux<BrokerInfoEntry<T>> joinEvents() {
+		return Flux.mergeSequential(Flux.fromIterable(connections.values()),
+				joinEvents.asFlux()
+		);
 	}
 
 	public Flux<BrokerInfo> leaveEvents() {
-		return leaveEvents.asFlux().filter(brokerInfo -> true);
+		return leaveEvents.asFlux();
 	}
 
 	public static class BrokerInfoEntry<T> {

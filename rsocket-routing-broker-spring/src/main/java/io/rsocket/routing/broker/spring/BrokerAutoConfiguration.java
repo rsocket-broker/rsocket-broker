@@ -43,19 +43,22 @@ import io.rsocket.routing.broker.rsocket.UnicastRSocketLocator;
 import io.rsocket.routing.broker.rsocket.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.spring.cluster.BrokerConnections;
 import io.rsocket.routing.broker.spring.cluster.ClusterController;
-import io.rsocket.routing.broker.spring.cluster.ClusterJoinListener;
+import io.rsocket.routing.broker.spring.cluster.ClusterNodeConnectionManager;
 import io.rsocket.routing.broker.spring.cluster.ClusterMonitor;
 import io.rsocket.routing.broker.spring.cluster.MessageHandlerClusterSocketAcceptor;
+import io.rsocket.routing.broker.spring.cluster.PropertiesClusterNodeProvider;
 import io.rsocket.routing.broker.spring.cluster.ProxyConnections;
 import io.rsocket.routing.broker.spring.cluster.RouteJoinListener;
 import io.rsocket.routing.common.spring.ClientTransportFactory;
 import io.rsocket.routing.common.spring.DefaultClientTransportFactory;
 import io.rsocket.routing.common.spring.MimeTypes;
+import io.rsocket.routing.frames.BrokerInfo;
 import io.rsocket.routing.frames.RoutingFrame;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 
 import org.springframework.beans.factory.InitializingBean;
@@ -64,7 +67,6 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.rsocket.RSocketStrategiesAutoConfiguration;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.rsocket.context.RSocketServerBootstrap;
 import org.springframework.boot.rsocket.netty.NettyRSocketServer;
@@ -98,8 +100,8 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	@Override
 	public void afterPropertiesSet() {
 		Hooks.onErrorDropped(t -> {
-			if (t instanceof CancellationException && log.isDebugEnabled()) {
-				log.debug("dropped cancellation error", t);
+			if (t instanceof CancellationException || t.getCause() instanceof CancellationException) {
+				// do nothing for now
 			}
 			else if (log.isWarnEnabled()) {
 				log.warn("dropped error", t);
@@ -173,8 +175,18 @@ public class BrokerAutoConfiguration implements InitializingBean {
 	}
 
 	@Bean
-	public BrokerConnections brokerConnections() {
-		return new BrokerConnections();
+	public BrokerConnections brokerConnections(BrokerProperties properties) {
+		BrokerConnections brokerConnections = new BrokerConnections();
+		// FIXME: is this the right place?
+		// for every new connection, send it to all my other connections
+		brokerConnections.joinEvents().flatMap(newEntry ->
+				Flux.fromIterable(brokerConnections.entries()).filter(existingEntry ->
+								!existingEntry.getBrokerInfo().getBrokerId().equals(newEntry.getBrokerInfo().getBrokerId())
+								&& !newEntry.getBrokerInfo().getBrokerId().equals(properties.getBrokerId()))
+						.flatMap(entry -> entry.getValue().route("cluster.remote-broker-info")
+								.data(newEntry.getBrokerInfo()).retrieveMono(BrokerInfo.class))
+		).subscribe();
+		return brokerConnections;
 	}
 
 	@Bean
@@ -237,8 +249,9 @@ public class BrokerAutoConfiguration implements InitializingBean {
 
 		@Bean
 		public ClusterController clusterController(BrokerProperties properties,
-				BrokerConnections brokerConnections, RoutingTable routingTable) {
-			return new ClusterController(properties, brokerConnections, routingTable);
+				BrokerConnections brokerConnections, RoutingTable routingTable, ObjectProvider<ClusterNodeConnectionManager> provider) {
+			return new ClusterController(properties, brokerConnections, routingTable,
+					broker -> provider.ifAvailable(connectionManager -> connectionManager.getConnectionEventPublisher().tryEmitNext(broker)));
 		}
 
 		@Bean
@@ -248,13 +261,18 @@ public class BrokerAutoConfiguration implements InitializingBean {
 		}
 
 		@Bean
-		public ClusterJoinListener clusterJoinListener(BrokerProperties properties,
+		public ClusterNodeConnectionManager clusterNodeConnectionManager(BrokerProperties properties,
 				BrokerConnections brokerConnections, ProxyConnections proxyConnections,
 				RSocketMessageHandler messageHandler, RSocketStrategies strategies,
 				ObjectProvider<ClientTransportFactory> transportFactories,
 				RoutingRSocketFactory routingRSocketFactory) {
-			return new ClusterJoinListener(properties, brokerConnections, proxyConnections,
+			return new ClusterNodeConnectionManager(properties, brokerConnections, proxyConnections,
 					messageHandler, strategies, routingRSocketFactory, transportFactories);
+		}
+
+		@Bean
+		public PropertiesClusterNodeProvider propertiesClusterNodeProvider(BrokerProperties properties, ClusterNodeConnectionManager connectionManager) {
+			return new PropertiesClusterNodeProvider(properties, connectionManager.getConnectionEventPublisher());
 		}
 
 		@Bean

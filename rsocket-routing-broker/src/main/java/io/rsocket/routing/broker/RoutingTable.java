@@ -77,7 +77,9 @@ public class RoutingTable implements Disposable {
 
 	public Flux<RouteJoin> joinEvents(Predicate<RouteJoin> predicate) {
 		// merge with existing routes
-		return joinEvents.asFlux().filter(predicate);
+		return Flux.mergeSequential(Flux.fromIterable(routes.values()),
+				joinEvents.asFlux()
+		).filter(predicate);
 	}
 
 	public Flux<RouteJoin> joinEvents(Tags tags) {

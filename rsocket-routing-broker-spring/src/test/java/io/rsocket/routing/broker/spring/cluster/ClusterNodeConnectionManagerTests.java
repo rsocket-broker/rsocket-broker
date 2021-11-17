@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ClusterJoinListenerTests {
+public class ClusterNodeConnectionManagerTests {
 
 	@Test
 	void testGetConnectionSetupPayload() {
@@ -41,7 +41,7 @@ public class ClusterJoinListenerTests {
 		properties.setBrokerId(id);
 		properties.setUri(URI.create("tcp://localhost:1111"));
 		properties.getCluster().setUri(URI.create("tcp://localhost:2222"));
-		DefaultConnectionSetupPayload setupPayload = ClusterJoinListener
+		DefaultConnectionSetupPayload setupPayload = ClusterNodeConnectionManager
 				.getConnectionSetupPayload(ByteBufAllocator.DEFAULT, properties);
 		ByteBuf data = setupPayload.data();
 		assertThat(FrameHeaderFlyweight.frameType(data)).isEqualTo(FrameType.BROKER_INFO);

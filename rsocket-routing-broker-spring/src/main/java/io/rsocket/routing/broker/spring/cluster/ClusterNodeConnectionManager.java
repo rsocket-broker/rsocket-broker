@@ -29,8 +29,8 @@ import io.rsocket.core.DefaultConnectionSetupPayload;
 import io.rsocket.frame.SetupFrameCodec;
 import io.rsocket.loadbalance.WeightedStatsRequestInterceptor;
 import io.rsocket.plugins.RSocketInterceptor;
-import io.rsocket.routing.broker.rsocket.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.rsocket.RoutingRSocketFactory;
+import io.rsocket.routing.broker.rsocket.WeightedStatsAwareRSocket;
 import io.rsocket.routing.broker.spring.BrokerProperties;
 import io.rsocket.routing.broker.spring.BrokerProperties.Broker;
 import io.rsocket.routing.common.WellKnownKey;
@@ -42,11 +42,11 @@ import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.DefaultPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationListener;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
 import org.springframework.messaging.rsocket.RSocketRequester;
@@ -56,13 +56,14 @@ import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHa
 import static io.rsocket.metadata.WellKnownMimeType.MESSAGE_RSOCKET_COMPOSITE_METADATA;
 
 /**
- * Once a broker node has started, this class reaches out to other configured brokers.
+ * This class reaches out to brokers that are added using {@see #getConnectionEventPublisher}.
  * It makes connections to both the cluster port and the proxy port.
  */
-public class ClusterJoinListener implements ApplicationListener<ApplicationReadyEvent> {
+public class ClusterNodeConnectionManager {
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
+	private final Sinks.Many<Broker> connectionEvents = Sinks.many().multicast().directBestEffort();
 	private final BrokerProperties properties;
 	private final BrokerConnections brokerConnections;
 	private final ProxyConnections proxyConnections;
@@ -70,10 +71,11 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 	private final RSocketStrategies strategies;
 	private final RoutingRSocketFactory routingRSocketFactory;
 	private final ObjectProvider<ClientTransportFactory> transportFactories;
+	private final BrokerInfo localBrokerInfo;
 
 	private RSocket rSocket;
 
-	public ClusterJoinListener(BrokerProperties properties, BrokerConnections brokerConnections,
+	public ClusterNodeConnectionManager(BrokerProperties properties, BrokerConnections brokerConnections,
 			ProxyConnections proxyConnections, RSocketMessageHandler messageHandler,
 			RSocketStrategies strategies, RoutingRSocketFactory routingRSocketFactory,
 			ObjectProvider<ClientTransportFactory> transportFactories) {
@@ -85,39 +87,42 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 		this.routingRSocketFactory = routingRSocketFactory;
 		this.transportFactories = transportFactories;
 		setupRSocket();
+		localBrokerInfo = getLocalBrokerInfo(properties);
+
+		// TODO dispose
+		connectionEvents.asFlux().map(this::connect).subscribe();
 	}
 
-	@Override
-	public void onApplicationEvent(ApplicationReadyEvent event) {
-		BrokerInfo localBrokerInfo = getLocalBrokerInfo(properties);
-		// TODO: tags
-		for (Broker broker : properties.getBrokers()) {
-			logger.info("connecting to {}", broker);
+	public Sinks.Many<Broker> getConnectionEventPublisher() {
+		return this.connectionEvents;
+	}
 
-			// TODO: micrometer
-			// 1- connect to remote cluster port with the Broker RSocket
-			RSocketRequester requester = connect(broker.getCluster(), localBrokerInfo, null, rSocket);
-			// 2- call remote broker-info to get remote broker-id
-			requester.route("cluster.broker-info")
-					.data(localBrokerInfo)
-					.retrieveMono(BrokerInfo.class)
-					.map(remoteBrokerInfo -> {
-						// 3- save cluster requester
-						brokerConnections.put(remoteBrokerInfo, requester);
-						return remoteBrokerInfo;
-					})
-					// 4- connect to remote broker port with a RoutingRSocket
-					.flatMap(remoteBrokerInfo -> {
-						RSocketRequester requester2 = connect(broker
-								.getProxy(), null, localBrokerInfo, routingRSocketFactory.create());
-						return requester2.rsocketClient().source().map(requesterRSocket -> {
-							// 5- save broker requester
-							proxyConnections.put(remoteBrokerInfo, requesterRSocket);
-							return requesterRSocket;
-						});
-					})
-					.subscribe();
-		}
+	private Disposable connect(Broker broker) {
+		logger.info("connecting to {}", broker);
+
+		// TODO: micrometer
+		// 1- connect to remote cluster port with the Broker RSocket
+		RSocketRequester requester = connect(broker.getCluster(), localBrokerInfo, null, rSocket);
+		// 2- call remote broker-info to get remote broker-id
+		return requester.route("cluster.broker-info")
+				.data(localBrokerInfo)
+				.retrieveMono(BrokerInfo.class)
+				.map(remoteBrokerInfo -> {
+					// 3- save cluster requester
+					brokerConnections.put(remoteBrokerInfo, requester);
+					return remoteBrokerInfo;
+				})
+				// 4- connect to remote broker port with a RoutingRSocket
+				.flatMap(remoteBrokerInfo -> {
+					RSocketRequester requester2 = connect(broker
+							.getProxy(), null, localBrokerInfo, routingRSocketFactory.create());
+					return requester2.rsocketClient().source().map(requesterRSocket -> {
+						// 5- save broker requester
+						proxyConnections.put(remoteBrokerInfo, requesterRSocket);
+						return requesterRSocket;
+					});
+				})
+				.subscribe();
 	}
 
 	static BrokerInfo getLocalBrokerInfo(BrokerProperties properties) {
@@ -162,6 +167,7 @@ public class ClusterJoinListener implements ApplicationListener<ApplicationReady
 	 * constructs a ConnectionSetupPayload to pass to accept. The resulting RSocket
 	 * is then stored in a field for use by the simple socket acceptor above.
 	 */
+	//TODO: inject the local RSocket
 	private void setupRSocket() {
 		ConnectionSetupPayload connectionSetupPayload = getConnectionSetupPayload();
 		SocketAcceptor responder = this.messageHandler.responder();
