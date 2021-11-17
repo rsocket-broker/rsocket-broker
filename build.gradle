@@ -49,7 +49,6 @@ subprojects {
 			dependency "org.mockito:mockito-core:${mockitoVersion}"
 			dependency "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
 			dependency "org.roaringbitmap:RoaringBitmap:${roaringbitmapVersion}"
-			dependency "io.rsocket.routing:rsocket-routing-client-spring:${rsocketBrokerClientVersion}"
 		}
 	}
 

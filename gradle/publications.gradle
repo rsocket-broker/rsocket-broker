@@ -11,8 +11,8 @@ subprojects {
                         afterEvaluate {
                             description = project.description
                         }
-                        groupId = 'io.rsocket.routing'
-                        url = 'https://github.com/rsocket-routing'
+                        groupId = 'io.rsocket.broker'
+                        url = 'https://github.com/rsocket-broker'
                         licenses {
                             license {
                                 name = "The Apache Software License, Version 2.0"
@@ -33,9 +33,9 @@ subprojects {
                             }
                         }
                         scm {
-                            connection = 'scm:git:https://github.com/rsocket-routing/rsocket-routing-broker.git'
-                            developerConnection = 'scm:git:https://github.com/rsocket-routing/rsocket-routing-broker.git'
-                            url = 'https://github.com/rsocket-routing/rsocket-routing-broker'
+                            connection = 'scm:git:https://github.com/rsocket-broker/rsocket-broker.git'
+                            developerConnection = 'scm:git:https://github.com/rsocket-broker/rsocket-broker.git'
+                            url = 'https://github.com/rsocket-broker/rsocket-broker'
                         }
                         versionMapping {
                             usage('java-api') {
