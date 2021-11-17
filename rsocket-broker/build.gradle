@@ -1,0 +1,17 @@
+description = 'RSocket Broker'
+
+dependencies {
+	implementation 'io.projectreactor.netty:reactor-netty'
+	api "io.rsocket:rsocket-core"
+	api "io.rsocket.broker:rsocket-broker-common"
+	api "io.rsocket.broker:rsocket-broker-frames"
+	api "org.agrona:agrona"
+	api 'org.roaringbitmap:RoaringBitmap'
+	api 'org.slf4j:slf4j-api'
+
+	testImplementation 'org.assertj:assertj-core'
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testImplementation 'org.mockito:mockito-core'
+	testImplementation 'org.mockito:mockito-junit-jupiter'
+	testImplementation 'org.slf4j:slf4j-simple'
+}

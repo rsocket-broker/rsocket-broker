@@ -1,0 +1,16 @@
+description = 'RSocket Broker Spring'
+
+dependencies {
+	api project(':rsocket-broker')
+	api 'io.rsocket.broker:rsocket-broker-common'
+	api 'io.rsocket.broker:rsocket-broker-common-spring'
+	api 'io.rsocket.broker:rsocket-broker-frames'
+	implementation 'org.springframework.boot:spring-boot-starter-rsocket'
+	annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+
+	testImplementation 'io.rsocket:rsocket-transport-local'
+	testImplementation 'io.rsocket.broker:rsocket-broker-client'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+}

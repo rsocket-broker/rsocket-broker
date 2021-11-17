@@ -39,16 +39,17 @@ subprojects {
 		}
 
 		dependencies {
-			dependency "io.rsocket.routing:rsocket-routing-client:${rsocketRoutingClientVersion}"
-			dependency "io.rsocket.routing:rsocket-routing-common:${rsocketRoutingClientVersion}"
-			dependency "io.rsocket.routing:rsocket-routing-common-spring:${rsocketRoutingClientVersion}"
-			dependency "io.rsocket.routing:rsocket-routing-frames:${rsocketRoutingClientVersion}"
+			dependency "io.rsocket.broker:rsocket-broker-client:${rsocketBrokerClientVersion}"
+			dependency "io.rsocket.broker:rsocket-broker-client-spring:${rsocketBrokerClientVersion}"
+			dependency "io.rsocket.broker:rsocket-broker-common:${rsocketBrokerClientVersion}"
+			dependency "io.rsocket.broker:rsocket-broker-common-spring:${rsocketBrokerClientVersion}"
+			dependency "io.rsocket.broker:rsocket-broker-frames:${rsocketBrokerClientVersion}"
 			dependency "org.agrona:agrona:${agronaVersion}"
 			dependency "org.assertj:assertj-core:${assertjVersion}"
 			dependency "org.mockito:mockito-core:${mockitoVersion}"
 			dependency "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
 			dependency "org.roaringbitmap:RoaringBitmap:${roaringbitmapVersion}"
-			dependency "io.rsocket.routing:rsocket-routing-client-spring:${rsocketRoutingClientVersion}"
+			dependency "io.rsocket.routing:rsocket-routing-client-spring:${rsocketBrokerClientVersion}"
 		}
 	}
 
