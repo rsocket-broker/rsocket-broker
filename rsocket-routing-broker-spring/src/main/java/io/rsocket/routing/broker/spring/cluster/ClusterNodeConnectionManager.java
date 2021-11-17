@@ -56,7 +56,7 @@ import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHa
 import static io.rsocket.metadata.WellKnownMimeType.MESSAGE_RSOCKET_COMPOSITE_METADATA;
 
 /**
- * This class reaches out to brokers that are added using {@see #getConnectionEventPublisher}.
+ * This class reaches out to brokers that are added using {@link #getConnectionEventPublisher}.
  * It makes connections to both the cluster port and the proxy port.
  */
 public class ClusterNodeConnectionManager {
