@@ -15,15 +15,15 @@ subprojects {
 	repositories {
 	  if (version.endsWith('SNAPSHOT')) {
         mavenLocal()
-		maven { url 'https://repo.spring.io/snapshot' }
 		maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
 		maven {
-			url = uri("https://maven.pkg.github.com/rsocket-routing/rsocket-routing-client")
+			url = uri("https://maven.pkg.github.com/rsocket-broker/rsocket-broker-client")
 			credentials {
 				username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
 				password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
 			}
 		}
+		maven { url 'https://repo.spring.io/snapshot' }
 	  }
 	  mavenCentral()
 	  maven { url 'https://repo.spring.io/milestone' }
