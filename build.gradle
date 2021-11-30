@@ -35,7 +35,6 @@ subprojects {
 			mavenBom "org.junit:junit-bom:${junitJupiterVersion}"
 			mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
 			mavenBom "io.rsocket:rsocket-bom:${rsocketVersion}"
-			mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
 		}
 
 		dependencies {

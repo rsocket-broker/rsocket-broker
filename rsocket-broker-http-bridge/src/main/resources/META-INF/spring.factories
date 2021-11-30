@@ -1,3 +1,0 @@
-# AutoConfiguration
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-io.rsocket.broker.http.bridge.config.RSocketHttpBridgeAutoConfiguration
