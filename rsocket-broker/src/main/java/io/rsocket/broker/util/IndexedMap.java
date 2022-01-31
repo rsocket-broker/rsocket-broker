@@ -35,16 +35,16 @@ public interface IndexedMap<K, V, IDX> {
 	 * @param key key with which the specified value is to be associated
 	 * @param value value to be associated with the specified key
 	 * @param indexable indexable to be associated with the specified key
-	 * @return the previous value associated with <tt>key</tt>, or
-	 *      <tt>null</tt> if there was no mapping for <tt>key</tt>.
+	 * @return the previous value associated with <code>key</code>, or
+	 *      <code>null</code> if there was no mapping for <code>key</code>.
 	 */
 	V put(K key, V value, IDX indexable);
 
 	/**
 	 * Removes the mapping for a key from this map if it is present.
 	 * @param key key whose mapping is to be removed from the map
-	 * @return the previous value associated with <tt>key</tt>, or
-	 *      <tt>null</tt> if there was no mapping for <tt>key</tt>.
+	 * @return the previous value associated with <code>key</code>, or
+	 *      <code>null</code> if there was no mapping for <code>key</code>.
 	 */
 	V remove(K key);
 
@@ -55,8 +55,8 @@ public interface IndexedMap<K, V, IDX> {
 	int size();
 
 	/**
-	 * Returns <tt>true</tt> if this map contains no key-value mappings.
-	 * @return <tt>true</tt> if this map contains no key-value mappings
+	 * Returns <code>true</code> if this map contains no key-value mappings.
+	 * @return <code>true</code> if this map contains no key-value mappings
 	 */
 	boolean isEmpty();
 
