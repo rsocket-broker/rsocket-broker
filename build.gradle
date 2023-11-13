@@ -10,7 +10,7 @@ subprojects {
 	apply plugin: 'com.jfrog.artifactory'
 	apply plugin: 'signing'
 
-	sourceCompatibility = '17'
+	sourceCompatibility = '21'
 
 	repositories {
 	  if (version.endsWith('SNAPSHOT')) {
