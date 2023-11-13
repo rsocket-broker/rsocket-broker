@@ -10,7 +10,7 @@ subprojects {
 	apply plugin: 'com.jfrog.artifactory'
 	apply plugin: 'signing'
 
-	sourceCompatibility = '21'
+	sourceCompatibility = '17'
 
 	repositories {
 	  if (version.endsWith('SNAPSHOT')) {
@@ -48,30 +48,6 @@ subprojects {
 			dependency "org.mockito:mockito-core:${mockitoVersion}"
 			dependency "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
 			dependency "org.roaringbitmap:RoaringBitmap:${roaringbitmapVersion}"
-		}
-	}
-
-	plugins.withType(JavaLibraryPlugin) {
-		task sourcesJar(type: Jar) {
-			classifier 'sources'
-			from sourceSets.main.allJava
-		}
-
-		task javadocJar(type: Jar, dependsOn: javadoc) {
-			classifier 'javadoc'
-			from javadoc.destinationDir
-		}
-
-		plugins.withType(MavenPublishPlugin) {
-			publishing {
-				publications {
-					maven(MavenPublication) {
-						from components.java
-						artifact sourcesJar
-						artifact javadocJar
-					}
-				}
-			}
 		}
 	}
 
