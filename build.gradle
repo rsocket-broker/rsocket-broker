@@ -1,6 +1,8 @@
 plugins {
 	id 'com.jfrog.artifactory' version '4.21.0' apply false
 	id 'io.spring.dependency-management' version '1.1.0'
+	id 'java'
+    id 'maven-publish'
 }
 
 subprojects {
@@ -48,6 +50,17 @@ subprojects {
 			dependency "org.mockito:mockito-core:${mockitoVersion}"
 			dependency "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
 			dependency "org.roaringbitmap:RoaringBitmap:${roaringbitmapVersion}"
+		}
+	}
+	java {
+		withSourcesJar()
+		withJavadocJar()
+	}
+	publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				from components.java
+			}
 		}
 	}
 
