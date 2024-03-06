@@ -1,6 +1,6 @@
 plugins {
 	id 'com.jfrog.artifactory' version '4.21.0' apply false
-	id 'io.spring.dependency-management' version '1.1.0'
+	id 'io.spring.dependency-management' version '1.1.4'
 	id 'java'
     id 'maven-publish'
 }
@@ -33,10 +33,7 @@ subprojects {
 
 	dependencyManagement {
 		imports {
-			mavenBom "io.projectreactor:reactor-bom:${reactorBomVersion}"
-			mavenBom "org.junit:junit-bom:${junitJupiterVersion}"
 			mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
-			mavenBom "io.rsocket:rsocket-bom:${rsocketVersion}"
 		}
 
 		dependencies {
@@ -52,6 +49,13 @@ subprojects {
 			dependency "org.roaringbitmap:RoaringBitmap:${roaringbitmapVersion}"
 		}
 	}
+
+	dependencies {
+		implementation platform("io.projectreactor:reactor-bom:${reactorBomVersion}")
+		implementation platform("io.rsocket:rsocket-bom:${rsocketVersion}")
+		implementation platform("org.junit:junit-bom:${junitJupiterVersion}")
+	}
+
 	java {
 		withSourcesJar()
 		withJavadocJar()

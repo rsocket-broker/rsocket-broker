@@ -39,7 +39,7 @@ subprojects {
                         }
                         versionMapping {
                             usage('java-api') {
-                                fromResolutionResult()
+                                fromResolutionResult('runtimeClasspath')
                             }
                             usage('java-runtime') {
                                 fromResolutionResult()
