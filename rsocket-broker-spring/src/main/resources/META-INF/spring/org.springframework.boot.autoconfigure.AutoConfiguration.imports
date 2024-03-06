@@ -1,0 +1,2 @@
+io.rsocket.broker.spring.BrokerRSocketStrategiesAutoConfiguration
+io.rsocket.broker.spring.BrokerAutoConfiguration
